@@ -1,3 +1,4 @@
+use spdlog::prelude::*;
 use {argh::FromArgs, std::fmt::Debug};
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -36,7 +37,10 @@ impl Args {
     /// Parse Command Args
     pub fn ayaya(&self) -> eyre::Result<()> {
         match self.app {
-            SubCmd::Renc(_) => todo!(),
+            SubCmd::Renc(_) => {
+                info!("command start");
+                Ok(())
+            }
             SubCmd::Edit(_) => todo!(),
         }
     }
