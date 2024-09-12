@@ -43,12 +43,6 @@
             ];
           };
 
-          pre-commit = {
-            check.enable = true;
-            settings.hooks = {
-              nixfmt-rfc-style.enable = true;
-            };
-          };
           packages.default =
             let
               toolchain = pkgs.rust-bin.nightly.latest.minimal;
@@ -64,6 +58,7 @@
                 ;
             in
             (buildPackage { src = ./.; });
+
           formatter = pkgs.nixfmt-rfc-style;
 
           devShells.default = pkgs.mkShell {
@@ -71,9 +66,18 @@
               pkgs.vaultix
             ];
           };
+
+          pre-commit = {
+            check.enable = true;
+            settings.hooks = {
+              nixfmt-rfc-style.enable = true;
+            };
+          };
         };
       flake = {
-        overlays.default = final: prev: { vaultix = inputs.self.packages.default; };
+        overlays.default = final: prev: {
+          vaultix = inputs.self.packages.${prev.system}.default;
+        };
       };
     };
 }
