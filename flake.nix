@@ -9,10 +9,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     naersk.url = "github:nix-community/naersk";
-    fenix = {
-      url = "github:nix-community/fenix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     pre-commit-hooks = {
       url = "github:cachix/pre-commit-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -41,10 +37,7 @@
         {
           _module.args.pkgs = import inputs.nixpkgs {
             inherit system;
-            overlays = with inputs; [
-              fenix.overlays.default
-              rust-overlay.overlays.default
-            ];
+            overlays = [ inputs.rust-overlay.overlays.default ];
           };
 
           pre-commit = {
@@ -56,12 +49,19 @@
           packages.default =
             let
               toolchain = pkgs.rust-bin.nightly.latest.minimal;
-              naersk' = pkgs.callPackage inputs.naersk {
-                cargo = toolchain;
-                rustc = toolchain;
-              };
+              inherit (pkgs) callPackage lib;
+              inherit
+                (callPackage inputs.naersk (
+                  lib.genAttrs [
+                    "cargo"
+                    "rustc"
+                  ] (n: toolchain)
+                ))
+                buildPackage
+                ;
             in
-            (naersk'.buildPackage { src = ./.; });
+            (buildPackage { src = ./.; });
+          formatter = pkgs.nixfmt-rfc-style;
         };
       flake = {
         overlays.default = final: prev: { vaultix = inputs.self.packages.default; };
