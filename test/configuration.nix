@@ -11,9 +11,13 @@
       storageDir = ./secrets/renced/${config.networking.hostName};
       hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM4XC7dGxwY7VUPr4t+NtWL+c7pTl8g568jdv6aRbhDZ";
       masterIdentities = [
-        "/run/agenix"
+        # This indeed not safe since it has not password protection ;
+        ./safekey.txt.pub
+
+        # "/somewhere/priv"
+
         # {
-        #   # This indeed not safe since it has not password protection ;
+        # This key indeed not safe since it has not password protection ;
         #   identity = ./safekey.txt.pub;
         #   # Optional; This has the same type as `age.rekey.hostPubkey`
         #   # and allows explicit association of a pubkey with the identity.
