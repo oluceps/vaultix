@@ -2,20 +2,35 @@
   lib,
   pkgs,
   modulesPath,
+  config,
   ...
 }:
 {
   vaultix = {
+    settings.storageDir = ./secrets/renced/${config.networking.hostName};
+    # settings.hostPubkey = /. + (builtins.elemAt config.services.openssh.hostKeys 0).path + ".pub";
+    settings.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM4XC7dGxwY7VUPr4t+NtWL+c7pTl8g568jdv6aRbhDZ";
+    settings.masterIdentities = [
+
+      {
+        # This has the same type as the other ways to specify an identity.
+        identity = ./safekey.txt.pub;
+        # Optional; This has the same type as `age.rekey.hostPubkey`
+        # and allows explicit association of a pubkey with the identity.
+        pubkey = "age1zhwnp754d2puu28tjmhqchfp4ukecxhtulx26nsxeey65ez9cu8qk3295c";
+      }
+
+    ];
     secrets = {
       factorio-server = {
-        file = ./secret/server.age;
+        file = ./secrets/server.age;
         mode = "640";
         owner = "factorio";
         group = "users";
         name = "factorio-server";
       };
       factorio-admin = {
-        file = ./secret/admin.age;
+        file = ./secrets/admin.age;
         mode = "640";
         owner = "factorio";
         group = "users";

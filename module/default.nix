@@ -9,16 +9,20 @@ let
   inherit (lib)
     types
     mkOption
+    isAttrs
+    isPath
+    readFile
     literalExpression
     mkEnableOption
     mkIf
+    assertMsg
     ;
   inherit (config.users) users;
 
   cfg = config.vaultix;
 
   # Using systemd instead of activationScript. Required.
-  sysusers = lib.assertMsg (
+  sysusers = assertMsg (
     options.systemd ? sysusers && (config.systemd.sysusers.enable || config.services.userborn.enable)
   ) "`systemd.sysusers` or `services.userborn` must be enabled.";
 
@@ -26,6 +30,18 @@ let
     { config, ... }:
     {
       options = {
+
+        storageDir = mkOption {
+          type = types.path;
+          example = literalExpression ''./. /* <- flake root */ + "/secrets/rekeyed/myhost" /* separate folder for each host */'';
+          description = ''
+            Only used when `storageMode = "local"`.
+
+            The local storage directory for rekeyed secrets. MUST be a path inside of your repository,
+            and it MUST be constructed by concatenating to the root directory of your flake. Follow
+            the example.
+          '';
+        };
 
         decryptedDir = mkOption {
           type = types.path;
@@ -179,73 +195,71 @@ let
         };
 
       };
+
     }
   );
 
-  secretType = types.submodule (
-    { config, ... }:
-    {
-      options = {
-        id = mkOption {
-          type = types.str;
-          default = config._module.args.name;
-          readOnly = true;
-          description = "The true identifier of this secret as used in `age.secrets`.";
-        };
-        name = mkOption {
-          type = types.str;
-          default = config._module.args.name;
-          defaultText = literalExpression "config._module.args.name";
-          description = ''
-            Name of the file used in {option}`vaultix.settings.decryptedDir`
-          '';
-        };
-        file = mkOption {
-          type = types.path;
-          description = ''
-            Age file the secret is loaded from.
-          '';
-        };
-        path = mkOption {
-          type = types.str;
-          default = "${cfg.settings.decryptedDir}/${config.name}";
-          defaultText = literalExpression ''
-            "''${cfg.settings.decryptedDir}/''${config.name}"
-          '';
-          description = ''
-            Path where the decrypted secret is installed.
-          '';
-        };
-        mode = mkOption {
-          type = types.str;
-          default = "0400";
-          description = ''
-            Permissions mode of the decrypted secret in a format understood by chmod.
-          '';
-        };
-        owner = mkOption {
-          type = types.str;
-          default = "0";
-          description = ''
-            User of the decrypted secret.
-          '';
-        };
-        group = mkOption {
-          type = types.str;
-          default = users.${config.owner}.group or "0";
-          defaultText = literalExpression ''
-            users.''${config.owner}.group or "0"
-          '';
-          description = ''
-            Group of the decrypted secret.
-          '';
-        };
-        symlink = mkEnableOption "symlinking secrets to their destination" // {
-          default = true;
-        };
+  secretType = types.submodule (submod: {
+    options = {
+      id = mkOption {
+        type = types.str;
+        default = submod.config._module.args.name;
+        readOnly = true;
+        description = "The true identifier of this secret as used in `age.secrets`.";
       };
-    }
-  );
+      name = mkOption {
+        type = types.str;
+        default = submod.config._module.args.name;
+        defaultText = literalExpression "submod.config._module.args.name";
+        description = ''
+          Name of the file used in {option}`vaultix.settings.decryptedDir`
+        '';
+      };
+      file = mkOption {
+        type = types.path;
+        description = ''
+          Age file the secret is loaded from.
+        '';
+      };
+      path = mkOption {
+        type = types.str;
+        default = "${cfg.settings.decryptedDir}/${submod.config.name}";
+        defaultText = literalExpression ''
+          "''${cfg.settings.decryptedDir}/''${config.name}"
+        '';
+        description = ''
+          Path where the decrypted secret is installed.
+        '';
+      };
+      mode = mkOption {
+        type = types.str;
+        default = "0400";
+        description = ''
+          Permissions mode of the decrypted secret in a format understood by chmod.
+        '';
+      };
+      owner = mkOption {
+        type = types.str;
+        default = "0";
+        description = ''
+          User of the decrypted secret.
+        '';
+      };
+      group = mkOption {
+        type = types.str;
+        default = users.${submod.config.owner}.group or "0";
+        defaultText = literalExpression ''
+          users.''${config.owner}.group or "0"
+        '';
+        description = ''
+          Group of the decrypted secret.
+        '';
+      };
+      symlink = mkEnableOption "symlinking secrets to their destination" // {
+        default = true;
+      };
+    };
+  });
 
 in
 {
@@ -271,7 +285,7 @@ in
 
   config =
     let
-      secretsMetadata = (pkgs.formats.toml { }).generate "secretsMetadata" cfg.secrets;
+      secretsMetadata = (pkgs.formats.toml { }).generate "secretsMetadata" cfg;
     in
     mkIf sysusers {
       test = secretsMetadata;
