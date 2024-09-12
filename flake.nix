@@ -1,5 +1,5 @@
 {
-  description = "Description for the project";
+  description = "Vaultix";
 
   inputs = {
     flake-parts.url = "github:hercules-ci/flake-parts";
