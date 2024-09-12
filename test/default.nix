@@ -23,8 +23,7 @@
           { lib, ... }:
           {
             options.test = lib.mkOption {
-              type = lib.types.str;
-              default = "none";
+              type = lib.types.path;
             };
           }
         )

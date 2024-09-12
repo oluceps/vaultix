@@ -1,6 +1,7 @@
 {
   config,
   options,
+  pkgs,
   lib,
   ...
 }:
@@ -128,10 +129,10 @@ in
 
   config =
     let
-      secretsJSONMetadata = builtins.toJSON cfg.secrets;
+      secretsMetadata = (pkgs.formats.toml { }).generate "secretsMetadata" cfg.secrets;
     in
     mkIf sysusers {
-      test = secretsJSONMetadata;
+      test = secretsMetadata;
     };
 
 }
