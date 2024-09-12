@@ -82,15 +82,25 @@ let
               # }
               # ```
               # we don't have to worry about it at a later stage.
-              coercedTo identityPathType (p: if isAttrs p then p else { identity = p; }) (submodule {
-                options = {
-                  identity = mkOption { type = identityPathType; };
-                  pubkey = mkOption {
-                    type = nullOr (coercedTo path (x: if isPath x then readFile x else x) str);
-                    default = null;
+              coercedTo identityPathType
+                (
+                  p:
+                  if isAttrs p then
+                    p
+                  else
+                    {
+                      identity = p;
+                    }
+                )
+                (submodule {
+                  options = {
+                    identity = mkOption { type = identityPathType; };
+                    pubkey = mkOption {
+                      type = coercedTo path (x: if isPath x then readFile x else x) str;
+                      default = "";
+                    };
                   };
-                };
-              })
+                })
             );
           description = ''
             The list of age identities that will be presented to `rage` when decrypting the stored secrets
