@@ -2,16 +2,42 @@
 
 Secret management for NixOS. Subset replacement of agenix.
 
-## Target
-+ Minimal Bash Script Code Size
+Highly inspired by agenix-rekey.
+
+But 
 
 > [!CAUTION]
-> At early development stage, Not ready for production.
+> This project is in early dev stage, NOT ready for production.
+
+## Target
+
++ Less Bash
++ Parallel Encryption / Decryption
++ AGE Key Support
++ PIV Card Support
++ **No** GPG Support
+
+### Support platforms:
+
+```nix
+systems = [
+  "x86_64-linux"
+  "aarch64-linux"
+];
+```
+
+## TODO
+
+- [ ] targets above
+- [ ] impl rust-nix interopt
+- [ ] nixos module
+- [ ] rekey
+- [ ] edit
 
 
 ## Compatibilities
 
-Inherited Options:
+(Will) Inherited Options:
 
 ```
 config.age.identityPaths      # /persist/keys/ssh_host_ed25519_key
