@@ -1,6 +1,10 @@
+use cmd::Args;
 use eyre::Result;
 
+mod cmd;
+mod interop;
+
 fn main() -> Result<()> {
-    println!("Hello, world!");
-    Ok(())
+    let args: Args = argh::from_env();
+    args.ayaya()
 }
