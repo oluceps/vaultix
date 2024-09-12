@@ -1,0 +1,12 @@
+- [ ] [edit] extra encrypt key
+- [ ] deploy to other directory
+- [x] check command
+- [x] vaultix.d in ramfs
+- [x] vaultix{,.d} permission
+- [x] age plugin support
+- [x] [renc] calc hash and skip unchanged
+- [x] apply `Secret` metadata
+- [x] nix integration
+- [x] ~~remote machine, compare hash, needs host priv key~~
+- [ ] ~~feed the toml after renced, thus store path changed~~
+- [ ] ~~eval in vaultix to json, reduce requirement~~

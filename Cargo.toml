@@ -1,0 +1,27 @@
+[package]
+name = "vaultix"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+age = { git = "https://github.com/str4d/rage.git",rev = "baf277a749c839e49f93bffb58d36734ac94be83", features = ["ssh", "plugin"]}
+argh = "0.1.12"
+blake3 = "1.5.4"
+console = "0.15.8"
+eyre = "0.6.12"
+libc = "0.2.158"
+nom = "7.1.3"
+pinentry = "0.5.1"
+rpassword = "7.3.1"
+serde = "1.0.210"
+serde_json = "1.0.132"
+sha2 = "0.10.8"
+spdlog-rs = "0.3.13"
+subtle = "2.6.1"
+sys-mount = "3.0.1"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"

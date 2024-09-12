@@ -1,0 +1,5 @@
+/target
+/result
+/secrets
+/.direnv
+test.json
