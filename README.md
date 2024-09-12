@@ -31,6 +31,7 @@ systems = [
 - [ ] nixos module
 - [ ] rekey
 - [ ] edit
+- [ ] integrate nix-eval-jobs
 
 
 ## Compatibilities
