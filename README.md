@@ -4,8 +4,6 @@ Secret management for NixOS. Subset replacement of agenix.
 
 Highly inspired by agenix-rekey.
 
-But 
-
 > [!CAUTION]
 > This project is in early dev stage, NOT ready for production.
 
