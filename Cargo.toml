@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 age = "0.10.0"
+eyre = "0.6.12"
