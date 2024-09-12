@@ -1395,6 +1395,7 @@ dependencies = [
  "age",
  "argh",
  "eyre",
+ "sha2",
  "spdlog-rs",
  "tempdir",
  "toml 0.8.19",
