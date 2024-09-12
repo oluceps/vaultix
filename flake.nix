@@ -20,6 +20,7 @@
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = with inputs; [
         pre-commit-hooks.flakeModule
+        ./test
       ];
       systems = [
         "x86_64-linux"
