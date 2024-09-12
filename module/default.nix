@@ -125,7 +125,7 @@ let
           '';
           default = [ ];
           example = [
-            ./secrets/my-public-yubikey-identity.txt
+            ./secrets/my-public-yubikey-identity.txt.pub
             {
               identity = ./password-encrypted-identity.pub;
               pubkey = "age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs3290gq";
