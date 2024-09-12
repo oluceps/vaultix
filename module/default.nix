@@ -26,6 +26,12 @@ let
     { config, ... }:
     {
       options = {
+        id = mkOption {
+          type = types.str;
+          default = config._module.args.name;
+          readOnly = true;
+          description = "The true identifier of this secret as used in `age.secrets`.";
+        };
         name = mkOption {
           type = types.str;
           default = config._module.args.name;
