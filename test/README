@@ -1,0 +1,4 @@
+Tiny Machine Config, Covered basic usage of vaultix.
+
+
+run `just test-metadata` for testing.

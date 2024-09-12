@@ -23,6 +23,7 @@
       };
     };
   };
+  services.userborn.enable = true;
 
   imports = [ (modulesPath + "/profiles/qemu-guest.nix") ];
 

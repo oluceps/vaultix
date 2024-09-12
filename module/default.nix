@@ -2,7 +2,6 @@
   config,
   options,
   lib,
-  pkgs,
   ...
 }:
 let
@@ -11,9 +10,16 @@ let
     mkOption
     literalExpression
     mkEnableOption
+    mkIf
     ;
   inherit (config.users) users;
+
   cfg = config.vaultix;
+
+  # Using systemd instead of activationScript. Required.
+  sysusers = lib.assertMsg (
+    options.systemd ? sysusers && (config.systemd.sysusers.enable || config.services.userborn.enable)
+  ) "`systemd.sysusers` or `services.userborn` must be enabled.";
 
   secretType = types.submodule (
     { config, ... }:
@@ -124,7 +130,7 @@ in
     let
       secretsJSONMetadata = builtins.toJSON cfg.secrets;
     in
-    {
+    mkIf sysusers {
       test = secretsJSONMetadata;
     };
 
