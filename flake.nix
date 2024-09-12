@@ -37,7 +37,10 @@
         {
           _module.args.pkgs = import inputs.nixpkgs {
             inherit system;
-            overlays = [ inputs.rust-overlay.overlays.default ];
+            overlays = with inputs; [
+              rust-overlay.overlays.default
+              self.overlays.default
+            ];
           };
 
           pre-commit = {
@@ -62,6 +65,12 @@
             in
             (buildPackage { src = ./.; });
           formatter = pkgs.nixfmt-rfc-style;
+
+          devShells.default = pkgs.mkShell {
+            inputsFrom = [
+              pkgs.vaultix
+            ];
+          };
         };
       flake = {
         overlays.default = final: prev: { vaultix = inputs.self.packages.default; };
