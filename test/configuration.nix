@@ -5,6 +5,25 @@
   ...
 }:
 {
+  vaultix = {
+    secrets = {
+      factorio-server = {
+        file = ./secret/server.age;
+        mode = "640";
+        owner = "factorio";
+        group = "users";
+        name = "factorio-server";
+      };
+      factorio-admin = {
+        file = ./secret/admin.age;
+        mode = "640";
+        owner = "factorio";
+        group = "users";
+        name = "factorio-admin";
+      };
+    };
+  };
+
   imports = [ (modulesPath + "/profiles/qemu-guest.nix") ];
 
   time.timeZone = "America/Los_Angeles";

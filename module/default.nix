@@ -120,4 +120,12 @@ in
     };
   };
 
+  config =
+    let
+      secretsJSONMetadata = builtins.toJSON cfg.secrets;
+    in
+    {
+      test = secretsJSONMetadata;
+    };
+
 }

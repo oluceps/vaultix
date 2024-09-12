@@ -1,5 +1,6 @@
 {
   withSystem,
+  self,
   inputs,
   ...
 }:
@@ -15,12 +16,19 @@
       inherit (inputs.nixpkgs) lib;
     in
     lib.nixosSystem {
-      specialArgs =
-        {
-        };
       modules = [
         ./configuration.nix
         ./UEFI
+        (
+          { lib, ... }:
+          {
+            options.test = lib.mkOption {
+              type = lib.types.str;
+              default = "none";
+            };
+          }
+        )
+        self.nixosModules.default
         {
           nixpkgs = {
             hostPlatform = lib.mkDefault system;

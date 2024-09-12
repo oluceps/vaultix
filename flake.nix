@@ -79,6 +79,7 @@
         overlays.default = final: prev: {
           vaultix = inputs.self.packages.${prev.system}.default;
         };
+        nixosModules.default = ./module;
       };
     };
 }
