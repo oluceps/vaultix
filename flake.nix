@@ -66,6 +66,10 @@
             inputsFrom = [
               pkgs.vaultix
             ];
+            buildInputs = with pkgs; [
+              just
+              nushell
+            ];
           };
 
           pre-commit = {
