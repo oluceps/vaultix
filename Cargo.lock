@@ -1395,6 +1395,7 @@ dependencies = [
  "age",
  "argh",
  "eyre",
+ "serde",
  "sha2",
  "spdlog-rs",
  "tempdir",
