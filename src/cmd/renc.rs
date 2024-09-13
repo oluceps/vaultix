@@ -56,16 +56,13 @@ impl Secret {
 
 impl Profile {
     pub fn renc(self, all: bool) -> Result<()> {
-        let secret_paths: Vec<PathBuf> = {
-            let secret_list: Vec<PathBuf> = self
-                .secrets
-                .into_values()
-                .map(|i| i.to_pathbuf(&self.settings).get())
-                .collect();
-            secret_list
-        };
+        let secret_paths: Vec<PathBuf> = self
+            .secrets
+            .into_values()
+            .map(|i| i.to_pathbuf(&self.settings).get())
+            .collect();
         debug!("{:?}", secret_paths);
-        // TODO: IMPL
+        // TODO: IMPL, renc need more element. host, masterIdent, pubhostkey, extraEncPubkey
         Ok(())
     }
 }
