@@ -21,7 +21,6 @@ pub struct Secret {
     pub symlink: bool,
 }
 
-#[allow(non_snake_case)]
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
