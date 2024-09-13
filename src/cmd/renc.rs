@@ -1,4 +1,4 @@
-use age::{encrypted, secrecy::Secret};
+use age::{encrypted, x25519};
 use eyre::{eyre, ContextCompat, Result};
 use spdlog::{debug, info, trace};
 use std::{
@@ -65,10 +65,10 @@ impl profile::Secret {
 
 impl Profile {
     /// Get the `secrets.{}.file`, which in nix store
-    pub fn get_cipher_file_paths(&self) -> HashSet<PathBuf> {
+    pub fn get_cipher_file_paths(&self) -> HashSet<(String, PathBuf)> {
         let mut sec_set = HashSet::new();
-        for (_, i) in &self.secrets {
-            if sec_set.insert(PathBuf::from(i.file.clone())) {
+        for (name, i) in &self.secrets {
+            if sec_set.insert((name.to_owned(), PathBuf::from(i.file.clone()))) {
                 debug!("found cipher file path {}", i.file)
             }
         }
@@ -76,34 +76,19 @@ impl Profile {
     }
 
     /// Read
-    pub fn get_cipher_contents(&self) -> HashSet<Vec<u8>> {
+    pub fn get_cipher_contents(&self) -> HashSet<(String, Vec<u8>)> {
         self.get_cipher_file_paths()
             .iter()
-            .map(|i| fs::read(i).expect("yes"))
+            .map(|i| (i.to_owned().0, fs::read(i.to_owned().1).expect("yes")))
             .collect()
     }
 
-    /**
-    First decrypt `./secrets/every` with masterIdentity's privkey,
-    Then encrypt with host public key separately, output to
-    `./secrets/renced/$host` and add to nix store.
-    */
-    pub fn renc(self, all: bool) -> Result<()> {
-        use age::{ssh, x25519};
-        let cipher_contents = self.get_cipher_contents();
-        let renced_secret_paths: Vec<PathBuf> = self
-            .secrets
-            .into_values()
-            .map(|i| i.to_renced_pathbuf(&self.settings).get())
-            .collect();
-        debug!("secret paths: {:?}", renced_secret_paths);
-        // TODO: IMPL, renc need more element. host, masterIdent, pubhostkey, extraEncPubkey
+    pub fn get_key_pair_list(
+        &self,
+    ) -> Vec<(Option<x25519::Identity>, eyre::Result<x25519::Recipient>)> {
+        use age::x25519;
 
-        let recip_host_pubkey = ssh::Recipient::from_str(self.settings.host_pubkey.as_str());
-
-        type KeyPairList = Vec<(Option<x25519::Identity>, eyre::Result<x25519::Recipient>)>;
-        let key_pair_list: KeyPairList = self
-            .settings
+        self.settings
             .master_identities
             .iter()
             .map(|MasterIdentity { identity, pubkey }| {
@@ -136,8 +121,29 @@ impl Profile {
                     (ident.ok(), recip)
                 }
             })
-            .collect();
+            .collect()
+    }
 
+    /**
+    First decrypt `./secrets/every` with masterIdentity's privkey,
+    Then encrypt with host public key separately, output to
+    `./secrets/renced/$host` and add to nix store.
+    */
+    pub fn renc(self, _all: bool) -> Result<()> {
+        use age::ssh;
+        let cipher_contents = self.get_cipher_contents();
+        let renced_secret_paths: Vec<PathBuf> = self
+            .secrets
+            .clone()
+            .into_values()
+            .map(|i| i.to_renced_pathbuf(&self.settings).get())
+            .collect();
+        debug!("secret paths: {:?}", renced_secret_paths);
+        // TODO: IMPL, renc need more element. host, masterIdent, pubhostkey, extraEncPubkey
+
+        let recip_host_pubkey = ssh::Recipient::from_str(self.settings.host_pubkey.as_str());
+
+        let key_pair_list = self.get_key_pair_list();
         // let encrypted = {
         //     let encryptor = age::Encryptor::with_recipients(vec![Box::new(
         //         key_pair_list
@@ -167,10 +173,11 @@ impl Profile {
                 .iter()
                 .map(|i| i.clone())
                 .map(|i| {
-                    let decryptor = match age::Decryptor::new(&i[..]).unwrap() {
-                        age::Decryptor::Recipients(d) => d,
-                        _ => unreachable!(),
-                    };
+                    let decryptor =
+                        match age::Decryptor::new(&i.1[..]).expect("parse cipher text error") {
+                            age::Decryptor::Recipients(d) => d,
+                            _ => unreachable!(),
+                        };
 
                     let mut decrypted = vec![];
                     let mut reader = decryptor
@@ -178,9 +185,9 @@ impl Profile {
                         .unwrap();
 
                     let _ = reader.read_to_end(&mut decrypted);
-                    decrypted
+                    (i.0, decrypted)
                 })
-                .collect::<Vec<Vec<u8>>>();
+                .collect::<Vec<(String, Vec<u8>)>>();
 
             debug!("decrypted_file_ctnt: {:?}", decrypted_file_ctnt);
         };

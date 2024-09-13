@@ -9,7 +9,7 @@ pub struct Profile {
     pub settings: Settings,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Secret {
     pub id: String,
     pub file: String,
