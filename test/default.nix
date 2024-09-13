@@ -15,25 +15,29 @@
     let
       inherit (inputs.nixpkgs) lib;
     in
-    lib.nixosSystem {
-      modules = [
-        ./configuration.nix
-        ./UEFI
-        (
-          { lib, ... }:
-          {
-            options.test = lib.mkOption {
-              type = lib.types.path;
-            };
-          }
-        )
-        self.nixosModules.default
+    lib.nixosSystem (
+      lib.warn
+        "THIS SYSTEM IS ONLY FOR TESTING, If u meet this msg in production there must be something wrong."
         {
-          nixpkgs = {
-            hostPlatform = lib.mkDefault system;
-          };
+          modules = [
+            ./configuration.nix
+            ./UEFI
+            (
+              { lib, ... }:
+              {
+                options.test = lib.mkOption {
+                  type = lib.types.path;
+                };
+              }
+            )
+            self.nixosModules.default
+            {
+              nixpkgs = {
+                hostPlatform = lib.mkDefault system;
+              };
+            }
+          ];
         }
-      ];
-    }
+    )
   );
 }
