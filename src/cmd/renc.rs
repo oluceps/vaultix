@@ -1,4 +1,4 @@
-use eyre::Result;
+use eyre::{eyre, Result};
 use spdlog::{debug, info, trace};
 use std::{
     path::{Path, PathBuf},
@@ -58,7 +58,7 @@ impl Secret {
 
 impl Profile {
     pub fn renc(self, all: bool) -> Result<()> {
-        use age::ssh;
+        use age::{ssh, x25519};
         let secret_paths: Vec<PathBuf> = self
             .secrets
             .into_values()
@@ -68,6 +68,17 @@ impl Profile {
         // TODO: IMPL, renc need more element. host, masterIdent, pubhostkey, extraEncPubkey
 
         let recip_host_pubkey = ssh::Recipient::from_str(self.settings.host_pubkey.as_str());
+
+        let recip_master_pub_ident_res_list: Vec<eyre::Result<x25519::Recipient>> = self
+            .settings
+            .master_identities
+            .iter()
+            .map(|i| {
+                x25519::Recipient::from_str(i.pubkey.as_str())
+                    .map_err(|i| eyre!("master identity pubkey {} invalid", i))
+            })
+            .collect();
+        // x25519::Recipient::from_str()
 
         debug!("age ssh recipients: {:?}", recip_host_pubkey);
 
