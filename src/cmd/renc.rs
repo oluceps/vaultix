@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use eyre::Result;
-use spdlog::{debug, trace};
+use spdlog::{debug, info, trace};
 
 use crate::profile::{Profile, Secret, Settings};
 use sha2::{Digest, Sha256};
@@ -21,7 +21,7 @@ impl RencSecretPath {
             hasher.update(host_pubkey);
             format!("{:x}", hasher.clone().finalize())
         };
-        debug!("{}", pubkey_hash);
+        debug!("public key hash: {}", pubkey_hash);
 
         let Secret { file, name, .. } = secret;
         let secret_file_path = {
@@ -35,7 +35,7 @@ impl RencSecretPath {
                 format!("{:x}", hasher.finalize()).split_off(32)
             };
 
-            debug!("{}", ident_hash);
+            debug!("identity hash: {}", ident_hash);
 
             let mut storage_dir_path = PathBuf::from(storage_dir);
             storage_dir_path.push(format!("{}-{}.age", ident_hash, name));
@@ -64,6 +64,7 @@ impl Profile {
                 .collect();
             secret_list
         };
+        debug!("{:?}", secret_paths);
         // TODO: IMPL
         Ok(())
     }

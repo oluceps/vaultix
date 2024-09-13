@@ -23,7 +23,7 @@ pub struct Secret {
 
 #[allow(non_snake_case)]
 #[derive(Debug, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "camelCase")]
 pub struct Settings {
     pub decrypted_dir: String,
     pub decrypted_mount_point: String,
