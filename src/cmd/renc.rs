@@ -1,7 +1,9 @@
-use std::path::{Path, PathBuf};
-
 use eyre::Result;
 use spdlog::{debug, info, trace};
+use std::{
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 use crate::profile::{Profile, Secret, Settings};
 use sha2::{Digest, Sha256};
@@ -56,13 +58,19 @@ impl Secret {
 
 impl Profile {
     pub fn renc(self, all: bool) -> Result<()> {
+        use age::ssh;
         let secret_paths: Vec<PathBuf> = self
             .secrets
             .into_values()
             .map(|i| i.to_pathbuf(&self.settings).get())
             .collect();
-        debug!("{:?}", secret_paths);
+        debug!("secret paths: {:?}", secret_paths);
         // TODO: IMPL, renc need more element. host, masterIdent, pubhostkey, extraEncPubkey
+
+        let recip_host_pubkey = ssh::Recipient::from_str(self.settings.host_pubkey.as_str());
+
+        debug!("age ssh recipients: {:?}", recip_host_pubkey);
+
         Ok(())
     }
 }

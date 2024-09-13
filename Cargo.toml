@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-age = "0.10.0"
+age = {version = "0.10.0",features = ["ssh"]}
 argh = "0.1.12"
 eyre = "0.6.12"
 serde = "1.0.210"
