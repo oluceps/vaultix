@@ -55,6 +55,26 @@ let
         '';
       };
 
+      hostKeys = mkOption {
+        type = types.listOf (
+          types.submodule ({
+            options = {
+              path = mkOption {
+                type = types.path;
+              };
+              type = mkOption {
+                type = types.str;
+              };
+            };
+          })
+        );
+        default = config.services.openssh.hostKeys;
+        readOnly = true;
+        description = ''
+          `config.services.openssh.hostKeys`
+        '';
+      };
+
       hostIdentifier = mkOption {
         type = types.str;
         default = config.networking.hostName;
@@ -307,7 +327,7 @@ in
 
   config =
     let
-      secretsMetadata = (pkgs.formats.toml { }).generate "secretsMetadata" cfg;
+      secretsMetadata = (pkgs.formats.toml { }).generate "secretsMetadata" (cfg);
     in
     mkIf sysusers {
       test = secretsMetadata;

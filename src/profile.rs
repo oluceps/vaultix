@@ -29,6 +29,7 @@ pub struct Settings {
     pub host_identifier: String,
     pub extraEncryption_pubkeys: Vec<String>,
     pub host_pubkey: String,
+    pub host_keys: Vec<HostKey>,
     pub storage_dir_relative: String,
     pub storage_dir_store: String,
     pub master_identities: Vec<MasterIdentity>,
@@ -38,4 +39,9 @@ pub struct Settings {
 pub struct MasterIdentity {
     pub identity: String,
     pub pubkey: String,
+}
+#[derive(Debug, Deserialize)]
+pub struct HostKey {
+    pub path: String,
+    pub r#type: String,
 }

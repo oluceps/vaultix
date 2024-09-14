@@ -54,9 +54,9 @@ pub struct EditSubCmd {
 /// Decrypt and deploy cipher credentials
 #[argh(subcommand, name = "deploy")]
 pub struct DeploySubCmd {
-    #[argh(positional, short = 's')]
+    #[argh(option, short = 's')]
     /// per hostkey encrypted dir
-    storage: String,
+    storage: Option<String>,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -90,7 +90,7 @@ impl Args {
             }
             SubCmd::Deploy(DeploySubCmd { ref storage }) => {
                 info!("deploying secrets");
-                profile.deploy(flake_root, storage.into())
+                profile.deploy()
             }
             SubCmd::Edit(_) => todo!(),
             SubCmd::Check(_) => todo!(),
