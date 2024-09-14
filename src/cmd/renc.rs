@@ -73,8 +73,8 @@ impl profile::Secret {
 pub struct NamePathPair(String, PathBuf);
 
 impl NamePathPair {
-    fn name(self) -> String {
-        self.0
+    fn name(&self) -> String {
+        self.0.clone()
     }
     fn path(self) -> PathBuf {
         self.1
@@ -92,7 +92,7 @@ impl NameBufPair {
     fn name(&self) -> String {
         self.0.clone()
     }
-    fn path(self) -> Vec<u8> {
+    fn buf(self) -> Vec<u8> {
         self.1
     }
     fn from(raw: (String, Vec<u8>)) -> Self {
@@ -199,17 +199,14 @@ impl Profile {
                         (i.name(), decrypted)
                     })
                     .collect::<Vec<(String, Vec<u8>)>>();
-                raw.into_iter()
-                    .map(|i| NameBufPair::from(i))
-                    .collect::<Vec<NameBufPair>>()
+                raw.into_iter().map(|i| NameBufPair::from(i))
             };
-            debug!("decrypted_file_ctnt: {:?}", decrypted);
 
             let recip_host_pubkey = ssh::Recipient::from_str(self.settings.host_pubkey.as_str());
 
             let recip_unwrap = recip_host_pubkey.unwrap();
 
-            let encrypted = decrypted.into_iter().map(|i| {
+            let encrypted = decrypted.map(|i| {
                 let encryptor =
                     age::Encryptor::with_recipients(vec![Box::new(recip_unwrap.clone())])
                         .expect("a recipient");
@@ -228,7 +225,7 @@ impl Profile {
             let renc_path_map = {
                 let mut renc_path_map = HashMap::new();
                 for i in renced_secret_paths {
-                    let _ = renc_path_map.insert(i.0, i.1);
+                    let _ = renc_path_map.insert(i.name(), i.path());
                 }
                 renc_path_map
             };
@@ -251,7 +248,7 @@ impl Profile {
 
                     debug!("path string {:?}", to_create);
                     let mut fd = File::create(to_create)?;
-                    let _ = fd.write_all(&i.1[..]);
+                    let _ = fd.write_all(&i.buf()[..]);
                 }
             }
             let o = add_to_store(renc_path)?;
