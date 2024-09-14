@@ -2,7 +2,7 @@ use age::{encrypted, x25519};
 use eyre::{eyre, ContextCompat, Result};
 use spdlog::{debug, info, trace};
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     ffi::OsStr,
     fs::{self, File},
     io::{Read, Write},
@@ -15,6 +15,8 @@ use std::{
 use crate::profile;
 use crate::profile::{MasterIdentity, Profile, Settings};
 use sha2::{digest::Key, Digest, Sha256};
+
+const SEC_DIR: &str = "./secrets/";
 
 struct RencSecretPath(PathBuf);
 
@@ -206,24 +208,52 @@ impl Profile {
 
             let recip_unwrap = recip_host_pubkey.unwrap();
 
-            let encrypted = decrypted
-                .into_iter()
-                .map(|i| {
-                    let encryptor =
-                        age::Encryptor::with_recipients(vec![Box::new(recip_unwrap.clone())])
-                            .expect("a recipient");
-                    let NameBufPair(name, buf) = i;
-                    let mut out_buf = vec![];
+            let encrypted = decrypted.into_iter().map(|i| {
+                let encryptor =
+                    age::Encryptor::with_recipients(vec![Box::new(recip_unwrap.clone())])
+                        .expect("a recipient");
+                let NameBufPair(name, buf) = i;
+                let mut out_buf = vec![];
 
-                    let mut writer = encryptor.wrap_output(&mut out_buf).unwrap();
+                let mut writer = encryptor.wrap_output(&mut out_buf).unwrap();
 
-                    writer.write_all(&buf[..]).unwrap();
-                    writer.finish().unwrap();
+                writer.write_all(&buf[..]).unwrap();
+                writer.finish().unwrap();
 
-                    NameBufPair(name, out_buf)
-                })
-                .collect::<Vec<NameBufPair>>();
+                NameBufPair(name, out_buf)
+            });
             debug!("re encrypted: {:?}", encrypted);
+
+            let renc_path_map = {
+                let mut renc_path_map = HashMap::new();
+                for i in renced_secret_paths {
+                    let _ = renc_path_map.insert(i.0, i.1);
+                }
+                renc_path_map
+            };
+
+            let renc_path = {
+                let mut p = PathBuf::from_str(SEC_DIR)?;
+                p.push("renced");
+                p
+            };
+            if !renc_path.exists() {
+                let _ = fs::create_dir_all(&renc_path);
+            }
+            for i in encrypted {
+                let base_path = renc_path_map.get(i.name().as_str());
+
+                let mut to_create = renc_path.clone();
+
+                if let Some(n) = base_path {
+                    to_create.push(n.file_name().unwrap());
+
+                    // TODO: prefix hostname
+                    debug!("path string {:?}", to_create);
+                    let mut fd = File::create(to_create)?;
+                    let _ = fd.write_all(&i.1[..]);
+                }
+            }
         };
 
         Ok(())

@@ -33,7 +33,7 @@ let
 
         storageDir = mkOption {
           type = types.path;
-          example = literalExpression ''./. /* <- flake root */ + "/secrets/rekeyed/myhost" /* separate folder for each host */'';
+          example = literalExpression ''./. /* <- flake root */ + "/secrets/renced/myhost" /* separate folder for each host */'';
           description = ''
             Only used when `storageMode = "local"`.
 
