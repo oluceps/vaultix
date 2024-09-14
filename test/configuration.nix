@@ -9,7 +9,7 @@
   vaultix = {
     settings = {
       storageDir = ./secrets/renced/${config.networking.hostName};
-      hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM4XC7dGxwY7VUPr4t+NtWL+c7pTl8g568jdv6aRbhDZ";
+      hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEu8luSFCts3g367nlKBrxMdLyOy4Awfo5Rb397ef2AR elen@kaambl";
       masterIdentities = [
         # This indeed not safe since it has not password protection ;
         ./safekey.txt.pub
@@ -42,6 +42,13 @@
       };
     };
   };
+  services.openssh.hostKeys = [
+    {
+      path = ./ssh_key;
+      type = "ed25519";
+    }
+  ];
+
   services.userborn.enable = true;
 
   imports = [ (modulesPath + "/profiles/qemu-guest.nix") ];
