@@ -16,7 +16,7 @@ use crate::profile;
 use crate::profile::{MasterIdentity, Profile, Settings};
 use sha2::{digest::Key, Digest, Sha256};
 
-const SEC_DIR: &str = "./secrets/";
+const SECRET_DIR: &str = "secrets";
 
 struct RencSecretPath(PathBuf);
 
@@ -163,7 +163,7 @@ impl Profile {
     Then encrypt with host public key separately, output to
     `./secrets/renced/$host` and add to nix store.
     */
-    pub fn renc(self, _all: bool) -> Result<()> {
+    pub fn renc(self, _all: bool, flake_root: PathBuf) -> Result<()> {
         use age::ssh;
         let cipher_contents = self.get_cipher_contents();
         let renced_secret_paths: Vec<NamePathPair> = self
@@ -232,7 +232,8 @@ impl Profile {
             };
 
             let renc_path = {
-                let mut p = PathBuf::from_str(SEC_DIR)?;
+                let mut p = flake_root;
+                p.push(SECRET_DIR);
                 p.push("renced");
                 p.push(self.settings.host_identifier.clone());
                 p

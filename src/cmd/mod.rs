@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, path::PathBuf};
 
 use spdlog::prelude::*;
 use {argh::FromArgs, std::fmt::Debug};
@@ -15,6 +15,9 @@ pub struct Args {
     #[argh(positional)]
     /// toml secret profile
     profile: String,
+    #[argh(option, short = 'f')]
+    /// toplevel of flake repository
+    flake_root: Option<String>,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -58,12 +61,19 @@ impl Args {
             toml::from_str(file.as_str())?
         };
 
+        // Maybe clean first?
+        let flake_root = if let Some(f) = &self.flake_root {
+            PathBuf::from(f)
+        } else {
+            std::env::current_dir()?
+        };
+
         trace!("{:#?}", profile);
 
         match self.app {
             SubCmd::Renc(RencSubCmd { all }) => {
                 info!("start re-encrypt secrets");
-                profile.renc(all)
+                profile.renc(all, flake_root)
             }
             SubCmd::Edit(_) => todo!(),
             SubCmd::Check(_) => todo!(),
