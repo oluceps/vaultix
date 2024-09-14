@@ -27,7 +27,7 @@ let
   ) "`systemd.sysusers` or `services.userborn` must be enabled.";
 
   settingsType = types.submodule (
-    { config, ... }:
+    submod:
     {
       options = {
 
@@ -48,6 +48,15 @@ let
           default = "/run/vaultix";
           description = ''
             Folder where secrets are symlinked to
+          '';
+        };
+
+        hostIdentifier = mkOption {
+          type = types.str;
+          default = config.networking.hostName;
+          readOnly = true;
+          description = ''
+            Host identifier
           '';
         };
 

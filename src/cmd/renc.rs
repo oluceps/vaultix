@@ -235,6 +235,7 @@ impl Profile {
             let renc_path = {
                 let mut p = PathBuf::from_str(SEC_DIR)?;
                 p.push("renced");
+                p.push(self.settings.host_identifier.clone());
                 p
             };
             if !renc_path.exists() {
