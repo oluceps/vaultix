@@ -1,6 +1,6 @@
 use age::{encrypted, x25519};
 use eyre::{eyre, ContextCompat, Result};
-use spdlog::{debug, info, trace};
+use spdlog::{debug, error, info, trace};
 use std::{
     collections::{HashMap, HashSet},
     ffi::OsStr,
@@ -12,8 +12,8 @@ use std::{
     str::FromStr,
 };
 
-use crate::profile;
 use crate::profile::{MasterIdentity, Profile, Settings};
+use crate::{interop::add_to_store, profile};
 use sha2::{digest::Key, Digest, Sha256};
 
 const SECRET_DIR: &str = "secrets";
@@ -36,6 +36,7 @@ impl RencSecretPath {
         debug!("public key hash: {}", pubkey_hash);
 
         let profile::Secret { file, name, .. } = secret;
+        // TODO: here the storage_dir_path jiziwa no use
         let secret_file_path = {
             hasher.update(file);
             let secret_file_string_hash = format!("{:x}", hasher.clone().finalize());
@@ -50,6 +51,7 @@ impl RencSecretPath {
             debug!("identity hash: {}", ident_hash);
 
             let mut storage_dir_path = PathBuf::from(storage_dir_suffix);
+            info!("storage dir path prefix: {:?}", storage_dir_path);
             storage_dir_path.push(format!("{}-{}.age", ident_hash, name));
             storage_dir_path
         };
@@ -252,6 +254,11 @@ impl Profile {
                     let _ = fd.write_all(&i.1[..]);
                 }
             }
+            let o = add_to_store(renc_path)?;
+            if !o.status.success() {
+                error!("Command executed with failing error code");
+            }
+            info!("path added to store: {}", String::from_utf8(o.stdout)?);
         };
 
         Ok(())

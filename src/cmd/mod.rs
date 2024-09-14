@@ -26,6 +26,7 @@ enum SubCmd {
     Renc(RencSubCmd),
     Edit(EditSubCmd),
     Check(CheckSubCmd),
+    Deploy(DeploySubCmd),
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -44,6 +45,15 @@ pub struct EditSubCmd {
     #[argh(positional)]
     /// file to edit
     file: String,
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+/// Decrypt and deploy cipher credentials
+#[argh(subcommand, name = "deploy")]
+pub struct DeploySubCmd {
+    #[argh(positional, short = 's')]
+    /// per hostkey encrypted dir
+    storage: String,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -75,6 +85,7 @@ impl Args {
                 info!("start re-encrypt secrets");
                 profile.renc(all, flake_root)
             }
+            SubCmd::Deploy(_) => todo!(),
             SubCmd::Edit(_) => todo!(),
             SubCmd::Check(_) => todo!(),
         }
