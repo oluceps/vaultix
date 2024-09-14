@@ -1,22 +1,17 @@
-use age::{encrypted, x25519};
 use eyre::{eyre, ContextCompat, Result};
-use spdlog::{debug, error, info, trace};
+use spdlog::{debug, error, info};
 use std::{
     collections::{HashMap, HashSet},
-    ffi::OsStr,
     fs::{self, File},
     io::{Read, Write},
     iter,
-    path::{Path, PathBuf},
-    rc::Rc,
+    path::PathBuf,
     str::FromStr,
 };
 
 use crate::profile::{MasterIdentity, Profile, Settings};
 use crate::{interop::add_to_store, profile};
-use sha2::{digest::Key, Digest, Sha256};
-
-const SECRET_DIR: &str = "secrets";
+use sha2::{Digest, Sha256};
 
 struct RencSecretPath(PathBuf);
 
@@ -79,10 +74,6 @@ impl NamePathPair {
     fn path(self) -> PathBuf {
         self.1
     }
-
-    fn get_base_path(&self) -> Option<&OsStr> {
-        self.1.file_name()
-    }
 }
 
 #[derive(Hash, Debug, Eq, PartialEq, Clone)]
@@ -100,6 +91,7 @@ impl NameBufPair {
     }
 }
 
+use age::x25519;
 impl Profile {
     /// Get the `secrets.{}.file`, which in nix store
     pub fn get_cipher_file_paths(&self) -> HashSet<NamePathPair> {
@@ -117,6 +109,14 @@ impl Profile {
         self.get_cipher_file_paths()
             .iter()
             .map(|i| NameBufPair(i.0.clone(), fs::read(i.1.clone()).expect("yes")))
+            .collect()
+    }
+
+    pub fn get_renced_paths(&self) -> Vec<NamePathPair> {
+        self.secrets
+            .clone()
+            .into_values()
+            .map(|i| NamePathPair(i.to_owned().id, i.to_renced_pathbuf(&self.settings).get()))
             .collect()
     }
 
@@ -168,12 +168,7 @@ impl Profile {
     pub fn renc(self, _all: bool, flake_root: PathBuf) -> Result<()> {
         use age::ssh;
         let cipher_contents = self.get_cipher_contents();
-        let renced_secret_paths: Vec<NamePathPair> = self
-            .secrets
-            .clone()
-            .into_values()
-            .map(|i| NamePathPair(i.to_owned().id, i.to_renced_pathbuf(&self.settings).get()))
-            .collect();
+        let renced_secret_paths: Vec<NamePathPair> = self.get_renced_paths();
         debug!("secret paths: {:?}", renced_secret_paths);
 
         let mut key_pair_list = self.get_key_pair_list();
@@ -233,7 +228,8 @@ impl Profile {
             let renc_path = {
                 let mut p = flake_root;
                 p.push(self.settings.storage_dir_suffix.clone());
-                p.canonicalize()?
+                info!("reading dir {:?}", p);
+                p
             };
             if !renc_path.exists() {
                 let _ = fs::create_dir_all(&renc_path);
@@ -255,9 +251,11 @@ impl Profile {
             if !o.status.success() {
                 error!("Command executed with failing error code");
             }
+            // Another side, calculate with nix `builtins.path` and pass to when deploy as `storage`
             info!("path added to store: {}", String::from_utf8(o.stdout)?);
         };
 
         Ok(())
     }
 }
+// Seems too long huh

@@ -4,6 +4,7 @@ use spdlog::prelude::*;
 use {argh::FromArgs, std::fmt::Debug};
 
 mod check;
+mod deploy;
 mod edit;
 mod renc;
 
@@ -85,7 +86,10 @@ impl Args {
                 info!("start re-encrypt secrets");
                 profile.renc(all, flake_root)
             }
-            SubCmd::Deploy(_) => todo!(),
+            SubCmd::Deploy(DeploySubCmd { ref storage }) => {
+                info!("deploying secrets");
+                profile.deploy(flake_root, storage.into())
+            }
             SubCmd::Edit(_) => todo!(),
             SubCmd::Check(_) => todo!(),
         }
