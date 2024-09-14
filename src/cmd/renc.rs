@@ -25,7 +25,7 @@ impl RencSecretPath {
         let mut hasher = Sha256::new();
         let Settings {
             host_pubkey,
-            storage_dir,
+            storage_dir_suffix,
             ..
         } = settings;
 
@@ -49,7 +49,7 @@ impl RencSecretPath {
 
             debug!("identity hash: {}", ident_hash);
 
-            let mut storage_dir_path = PathBuf::from(storage_dir);
+            let mut storage_dir_path = PathBuf::from(storage_dir_suffix);
             storage_dir_path.push(format!("{}-{}.age", ident_hash, name));
             storage_dir_path
         };
@@ -233,10 +233,8 @@ impl Profile {
 
             let renc_path = {
                 let mut p = flake_root;
-                p.push(SECRET_DIR);
-                p.push("renced");
-                p.push(self.settings.host_identifier.clone());
-                p
+                p.push(self.settings.storage_dir_suffix.clone());
+                p.canonicalize()?
             };
             if !renc_path.exists() {
                 let _ = fs::create_dir_all(&renc_path);
@@ -249,7 +247,6 @@ impl Profile {
                 if let Some(n) = base_path {
                     to_create.push(n.file_name().unwrap());
 
-                    // TODO: prefix hostname
                     debug!("path string {:?}", to_create);
                     let mut fd = File::create(to_create)?;
                     let _ = fd.write_all(&i.1[..]);

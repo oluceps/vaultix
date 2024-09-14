@@ -29,15 +29,11 @@ let
   settingsType = types.submodule (submod: {
     options = {
 
-      storageDir = mkOption {
-        type = types.path;
+      storageDirSuffix = mkOption {
+        type = types.str;
         example = literalExpression ''./. /* <- flake root */ + "/secrets/renced/myhost" /* separate folder for each host */'';
         description = ''
-          Only used when `storageMode = "local"`.
-
-          The local storage directory for rekeyed secrets. MUST be a path inside of your repository,
-          and it MUST be constructed by concatenating to the root directory of your flake. Follow
-          the example.
+          The local storage directory for rekeyed secrets. MUST be a str of path related to flake root.
         '';
       };
 
