@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use eyre::Context;
 use sha2::{Digest, Sha256};
 use spdlog::{debug, info};
 

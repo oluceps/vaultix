@@ -17,7 +17,10 @@ impl Profile {
             let storage = PathBuf::from(&self.settings.storage_dir_store);
             fs::read_dir(storage)?.for_each(|entry| {
                 let entry = entry.expect("enter store, must success");
-                let path = entry.path();
+                let path = entry
+                    .path()
+                    .canonicalize()
+                    .expect("file path initialize error");
                 let name = entry.file_name().to_string_lossy().to_string();
                 debug!("record secret name from store: {}", name);
                 let content = fs::read(path).expect("reading store, must success");
