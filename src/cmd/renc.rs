@@ -118,9 +118,9 @@ impl Profile {
             .collect()
     }
 
-    pub fn get_key_pair_list(
-        &self,
-    ) -> Vec<(Option<x25519::Identity>, eyre::Result<x25519::Recipient>)> {
+    pub fn get_key_pair_list<'a>(
+        &'a self,
+    ) -> impl Iterator<Item = (Option<x25519::Identity>, Result<x25519::Recipient>)> + 'a {
         use age::x25519;
 
         self.settings
@@ -156,7 +156,6 @@ impl Profile {
                     (ident.ok(), recip)
                 }
             })
-            .collect()
     }
 
     /**
@@ -175,9 +174,9 @@ impl Profile {
             .collect();
         debug!("secret paths: {:?}", renced_secret_paths);
 
-        let key_pair_list = self.get_key_pair_list();
+        let mut key_pair_list = self.get_key_pair_list();
 
-        if let Some(o) = key_pair_list.iter().find(|k| k.0.is_some()) {
+        if let Some(o) = key_pair_list.find(|k| k.0.is_some()) {
             let key = o.0.clone().expect("some");
             let decrypted = {
                 let raw = cipher_contents
