@@ -29,7 +29,8 @@ pub struct Settings {
     pub host_identifier: String,
     pub extraEncryption_pubkeys: Vec<String>,
     pub host_pubkey: String,
-    pub storage_dir_suffix: String,
+    pub storage_dir_relative: String,
+    pub storage_dir_store: String,
     pub master_identities: Vec<MasterIdentity>,
 }
 

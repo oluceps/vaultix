@@ -9,7 +9,7 @@
   vaultix = {
     settings = {
       # re-encryption cipher file store, related to flake root
-      storageDirSuffix = "./secrets/renced/${config.networking.hostName}";
+      storageDirRelative = "./test/secrets/renced/${config.networking.hostName}";
       hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEu8luSFCts3g367nlKBrxMdLyOy4Awfo5Rb397ef2AR elen@kaambl";
       masterIdentities = [
         # This indeed not safe since it has not password protection ;

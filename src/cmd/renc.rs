@@ -11,52 +11,6 @@ use std::{
 
 use crate::profile::{MasterIdentity, Profile, Settings};
 use crate::{interop::add_to_store, profile};
-use sha2::{Digest, Sha256};
-
-struct RencSecretPath(PathBuf);
-
-impl RencSecretPath {
-    pub fn init_from(settings: &Settings, secret: &profile::Secret) -> Self {
-        let mut hasher = Sha256::new();
-        let Settings {
-            host_pubkey,
-            storage_dir_suffix,
-            ..
-        } = settings;
-
-        let pubkey_hash = {
-            hasher.update(host_pubkey);
-            format!("{:x}", hasher.clone().finalize())
-        };
-        debug!("public key hash: {}", pubkey_hash);
-
-        let profile::Secret { file, name, .. } = secret;
-        // TODO: here the storage_dir_path jiziwa no use
-        let secret_file_path = {
-            hasher.update(file);
-            let secret_file_string_hash = format!("{:x}", hasher.clone().finalize());
-            let ident_hash = {
-                let mut pubkey_hash_string = pubkey_hash.clone();
-                pubkey_hash_string.push_str(&secret_file_string_hash);
-                let sum_hash_string = pubkey_hash_string;
-                hasher.update(sum_hash_string);
-                format!("{:x}", hasher.finalize()).split_off(32)
-            };
-
-            debug!("identity hash: {}", ident_hash);
-
-            let mut storage_dir_path = PathBuf::from(storage_dir_suffix);
-            info!("storage dir path prefix: {:?}", storage_dir_path);
-            storage_dir_path.push(format!("{}-{}.age", ident_hash, name));
-            storage_dir_path
-        };
-        Self(secret_file_path)
-    }
-
-    pub fn get(self) -> PathBuf {
-        self.0
-    }
-}
 
 impl profile::Secret {
     fn to_renced_pathbuf(self, settings: &Settings) -> RencSecretPath {
@@ -66,6 +20,23 @@ impl profile::Secret {
 
 #[derive(Hash, Debug, Eq, PartialEq)]
 pub struct NamePathPair(String, PathBuf);
+
+#[derive(Hash, Debug, Eq, PartialEq)]
+pub struct NamePathPairList(Vec<NamePathPair>);
+
+impl NamePathPairList {
+    pub fn inner(self) -> Vec<NamePathPair> {
+        self.0
+    }
+    /// Vec<NamePathPair> => Map
+    pub fn into_map(self) -> HashMap<String, PathBuf> {
+        let mut renc_path_map = HashMap::new();
+        for i in self.inner() {
+            let _ = renc_path_map.insert(i.name(), i.path());
+        }
+        renc_path_map
+    }
+}
 
 impl NamePathPair {
     fn name(&self) -> String {
@@ -92,6 +63,8 @@ impl NameBufPair {
 }
 
 use age::x25519;
+
+use super::renc_sec_path::RencSecretPath;
 impl Profile {
     /// Get the `secrets.{}.file`, which in nix store
     pub fn get_cipher_file_paths(&self) -> HashSet<NamePathPair> {
@@ -112,12 +85,14 @@ impl Profile {
             .collect()
     }
 
-    pub fn get_renced_paths(&self) -> Vec<NamePathPair> {
-        self.secrets
-            .clone()
-            .into_values()
-            .map(|i| NamePathPair(i.to_owned().id, i.to_renced_pathbuf(&self.settings).get()))
-            .collect()
+    pub fn get_renced_paths(&self) -> NamePathPairList {
+        NamePathPairList(
+            self.secrets
+                .clone()
+                .into_values()
+                .map(|i| NamePathPair(i.to_owned().id, i.to_renced_pathbuf(&self.settings).get()))
+                .collect(),
+        )
     }
 
     pub fn get_key_pair_list<'a>(
@@ -168,7 +143,7 @@ impl Profile {
     pub fn renc(self, _all: bool, flake_root: PathBuf) -> Result<()> {
         use age::ssh;
         let cipher_contents = self.get_cipher_contents();
-        let renced_secret_paths: Vec<NamePathPair> = self.get_renced_paths();
+        let renced_secret_paths: NamePathPairList = self.get_renced_paths();
         debug!("secret paths: {:?}", renced_secret_paths);
 
         let mut key_pair_list = self.get_key_pair_list();
@@ -217,17 +192,11 @@ impl Profile {
             });
             debug!("re encrypted: {:?}", encrypted);
 
-            let renc_path_map = {
-                let mut renc_path_map = HashMap::new();
-                for i in renced_secret_paths {
-                    let _ = renc_path_map.insert(i.name(), i.path());
-                }
-                renc_path_map
-            };
+            let renc_path_map = renced_secret_paths.into_map();
 
             let renc_path = {
                 let mut p = flake_root;
-                p.push(self.settings.storage_dir_suffix.clone());
+                p.push(self.settings.storage_dir_relative.clone());
                 info!("reading dir {:?}", p);
                 p
             };
@@ -258,4 +227,4 @@ impl Profile {
         Ok(())
     }
 }
-// Seems too long huh
+// Seems quite long huh

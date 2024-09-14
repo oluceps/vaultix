@@ -19,6 +19,9 @@
       lib.warn
         "THIS SYSTEM IS ONLY FOR TESTING, If u meet this msg in production there must be something wrong."
         {
+          specialArgs = {
+            inherit self;
+          };
           modules = [
             ./configuration.nix
             ./UEFI

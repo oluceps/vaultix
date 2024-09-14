@@ -3,6 +3,7 @@
   options,
   pkgs,
   lib,
+  self,
   ...
 }:
 let
@@ -29,8 +30,17 @@ let
   settingsType = types.submodule (submod: {
     options = {
 
-      storageDirSuffix = mkOption {
+      storageDirRelative = mkOption {
         type = types.str;
+        example = literalExpression ''./. /* <- flake root */ + "/secrets/renced/myhost" /* separate folder for each host */'';
+        description = ''
+          The local storage directory for rekeyed secrets. MUST be a str of path related to flake root.
+        '';
+      };
+      storageDirStore = mkOption {
+        type = types.path;
+        readOnly = true;
+        default = "${self}" + "/" + submod.config.storageDirRelative;
         example = literalExpression ''./. /* <- flake root */ + "/secrets/renced/myhost" /* separate folder for each host */'';
         description = ''
           The local storage directory for rekeyed secrets. MUST be a str of path related to flake root.

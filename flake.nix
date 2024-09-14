@@ -20,6 +20,7 @@
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = with inputs; [
         pre-commit-hooks.flakeModule
+
         ./flake-module.nix
         ./test
       ];

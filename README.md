@@ -24,6 +24,17 @@ systems = [
 ];
 ```
 
+## Usage
+
+Prerequisite:
+
++ using flake.
+
++ using flake-parts.
+
++ pass `self` as specialArgs, to `nixosSystem`.
+
+
 ## TODO
 
 - [ ] targets above
