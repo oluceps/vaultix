@@ -3,6 +3,7 @@ use eyre::{eyre, ContextCompat, Result};
 use spdlog::{debug, info, trace};
 use std::{
     collections::HashSet,
+    ffi::OsStr,
     fs::{self, File},
     io::{Read, Write},
     iter,
@@ -52,6 +53,7 @@ impl RencSecretPath {
         };
         Self(secret_file_path)
     }
+
     pub fn get(self) -> PathBuf {
         self.0
     }
@@ -63,12 +65,43 @@ impl profile::Secret {
     }
 }
 
+#[derive(Hash, Debug, Eq, PartialEq)]
+pub struct NamePathPair(String, PathBuf);
+
+impl NamePathPair {
+    fn name(self) -> String {
+        self.0
+    }
+    fn path(self) -> PathBuf {
+        self.1
+    }
+
+    fn get_base_path(&self) -> Option<&OsStr> {
+        self.1.file_name()
+    }
+}
+
+#[derive(Hash, Debug, Eq, PartialEq, Clone)]
+pub struct NameBufPair(String, Vec<u8>);
+
+impl NameBufPair {
+    fn name(&self) -> String {
+        self.0.clone()
+    }
+    fn path(self) -> Vec<u8> {
+        self.1
+    }
+    fn from(raw: (String, Vec<u8>)) -> Self {
+        Self(raw.0, raw.1)
+    }
+}
+
 impl Profile {
     /// Get the `secrets.{}.file`, which in nix store
-    pub fn get_cipher_file_paths(&self) -> HashSet<(String, PathBuf)> {
+    pub fn get_cipher_file_paths(&self) -> HashSet<NamePathPair> {
         let mut sec_set = HashSet::new();
         for (name, i) in &self.secrets {
-            if sec_set.insert((name.to_owned(), PathBuf::from(i.file.clone()))) {
+            if sec_set.insert(NamePathPair(name.to_owned(), PathBuf::from(i.file.clone()))) {
                 debug!("found cipher file path {}", i.file)
             }
         }
@@ -76,10 +109,10 @@ impl Profile {
     }
 
     /// Read
-    pub fn get_cipher_contents(&self) -> HashSet<(String, Vec<u8>)> {
+    pub fn get_cipher_contents(&self) -> HashSet<NameBufPair> {
         self.get_cipher_file_paths()
             .iter()
-            .map(|i| (i.to_owned().0, fs::read(i.to_owned().1).expect("yes")))
+            .map(|i| NameBufPair(i.0.clone(), fs::read(i.1.clone()).expect("yes")))
             .collect()
     }
 
@@ -132,67 +165,66 @@ impl Profile {
     pub fn renc(self, _all: bool) -> Result<()> {
         use age::ssh;
         let cipher_contents = self.get_cipher_contents();
-        let renced_secret_paths: Vec<PathBuf> = self
+        let renced_secret_paths: Vec<NamePathPair> = self
             .secrets
             .clone()
             .into_values()
-            .map(|i| i.to_renced_pathbuf(&self.settings).get())
+            .map(|i| NamePathPair(i.to_owned().id, i.to_renced_pathbuf(&self.settings).get()))
             .collect();
         debug!("secret paths: {:?}", renced_secret_paths);
-        // TODO: IMPL, renc need more element. host, masterIdent, pubhostkey, extraEncPubkey
-
-        let recip_host_pubkey = ssh::Recipient::from_str(self.settings.host_pubkey.as_str());
 
         let key_pair_list = self.get_key_pair_list();
-        // let encrypted = {
-        //     let encryptor = age::Encryptor::with_recipients(vec![Box::new(
-        //         key_pair_list
-        //             .get(0)
-        //             .clone()
-        //             .unwrap()
-        //             .1
-        //             .as_ref()
-        //             .cloned()
-        //             .unwrap(),
-        //     )])
-        //     .expect("we provided a recipient");
-
-        //     let mut encrypted = vec![];
-        //     let mut writer = encryptor.wrap_output(&mut encrypted)?;
-        //     writer.write_all(b"sometest")?;
-        //     writer.finish()?;
-
-        //     encrypted
-        // };
-
-        // debug!("{:?}", encrypted);
 
         if let Some(o) = key_pair_list.iter().find(|k| k.0.is_some()) {
             let key = o.0.clone().expect("some");
-            let decrypted_file_ctnt = cipher_contents
-                .iter()
-                .map(|i| i.clone())
+            let decrypted = {
+                let raw = cipher_contents
+                    .iter()
+                    .map(|i| {
+                        let decryptor =
+                            match age::Decryptor::new(&i.1[..]).expect("parse cipher text error") {
+                                age::Decryptor::Recipients(d) => d,
+                                _ => unreachable!(),
+                            };
+
+                        let mut decrypted = vec![];
+                        let mut reader = decryptor
+                            .decrypt(iter::once(&key as &dyn age::Identity))
+                            .unwrap();
+
+                        let _ = reader.read_to_end(&mut decrypted);
+                        (i.name(), decrypted)
+                    })
+                    .collect::<Vec<(String, Vec<u8>)>>();
+                raw.into_iter()
+                    .map(|i| NameBufPair::from(i))
+                    .collect::<Vec<NameBufPair>>()
+            };
+            debug!("decrypted_file_ctnt: {:?}", decrypted);
+
+            let recip_host_pubkey = ssh::Recipient::from_str(self.settings.host_pubkey.as_str());
+
+            let recip_unwrap = recip_host_pubkey.unwrap();
+
+            let encrypted = decrypted
+                .into_iter()
                 .map(|i| {
-                    let decryptor =
-                        match age::Decryptor::new(&i.1[..]).expect("parse cipher text error") {
-                            age::Decryptor::Recipients(d) => d,
-                            _ => unreachable!(),
-                        };
+                    let encryptor =
+                        age::Encryptor::with_recipients(vec![Box::new(recip_unwrap.clone())])
+                            .expect("a recipient");
+                    let NameBufPair(name, buf) = i;
+                    let mut out_buf = vec![];
 
-                    let mut decrypted = vec![];
-                    let mut reader = decryptor
-                        .decrypt(iter::once(&key as &dyn age::Identity))
-                        .unwrap();
+                    let mut writer = encryptor.wrap_output(&mut out_buf).unwrap();
 
-                    let _ = reader.read_to_end(&mut decrypted);
-                    (i.0, decrypted)
+                    writer.write_all(&buf[..]).unwrap();
+                    writer.finish().unwrap();
+
+                    NameBufPair(name, out_buf)
                 })
-                .collect::<Vec<(String, Vec<u8>)>>();
-
-            debug!("decrypted_file_ctnt: {:?}", decrypted_file_ctnt);
+                .collect::<Vec<NameBufPair>>();
+            debug!("re encrypted: {:?}", encrypted);
         };
-
-        debug!("ssh recipients, host pubkey: {:?}", recip_host_pubkey);
 
         Ok(())
     }
