@@ -1,0 +1,1 @@
+- [ ] should get entire Secret when deploy
