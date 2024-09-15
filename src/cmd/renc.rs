@@ -13,7 +13,7 @@ use crate::profile::{MasterIdentity, Profile, Settings};
 use crate::{interop::add_to_store, profile};
 
 impl profile::Secret {
-    fn to_renced_store_pathbuf(self, settings: &Settings) -> StoredSecretPath {
+    pub fn to_renced_store_pathbuf(self, settings: &Settings) -> StoredSecretPath {
         StoredSecretPath::init_from(settings, &self)
     }
 }

@@ -1,12 +1,30 @@
-use std::path::PathBuf;
+use std::{collections::HashMap, fs, path::PathBuf};
 
 use eyre::Context;
 use sha2::{Digest, Sha256};
 use spdlog::{debug, info};
 
-use crate::profile::{self, Settings};
+use crate::profile::{self, Profile, Settings};
 
 pub struct StoredSecretPath(PathBuf);
+
+pub struct SecretPathMap(HashMap<profile::Secret, StoredSecretPath>);
+
+impl SecretPathMap {
+    pub fn init_from(profile: &Profile) -> Self {
+        let mut m = HashMap::new();
+        profile.secrets.clone().into_values().for_each(|s| {
+            m.insert(s.clone(), s.to_renced_store_pathbuf(&profile.settings));
+        });
+        Self(m)
+    }
+    pub fn inner(self) -> HashMap<profile::Secret, StoredSecretPath> {
+        self.0
+    }
+    // pub fn get_all_secret_name(self) -> impl Iterator<Item = String> {
+    //     self.inner().into_keys().map(|i| i.name.clone())
+    // }
+}
 
 impl StoredSecretPath {
     pub fn init_from(settings: &Settings, secret: &profile::Secret) -> Self {
@@ -44,6 +62,10 @@ impl StoredSecretPath {
             storage_dir_path
         };
         Self(secret_file_path)
+    }
+
+    pub fn read_to_cipher_content(self) -> eyre::Result<Vec<u8>> {
+        fs::read(self.0).wrap_err("read cipher file error")
     }
 
     pub fn get(self) -> PathBuf {

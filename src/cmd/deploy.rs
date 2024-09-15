@@ -7,7 +7,10 @@ use std::{
     str::FromStr,
 };
 
-use crate::profile::Profile;
+use crate::{
+    cmd::stored_sec_path::SecretPathMap,
+    profile::{self, Profile},
+};
 
 use age::x25519;
 use eyre::{eyre, Context, Result};
@@ -89,22 +92,13 @@ impl Profile {
     */
     pub fn deploy(self) -> Result<()> {
         // hash-name.age => vec<u8>
-        let name_ciphertext_map: HashMap<String, Vec<u8>> = {
-            let mut map = HashMap::new();
-            // dir with host pub key encrypted material, prefix hash
-            let storage = PathBuf::from(&self.settings.storage_dir_store);
-            fs::read_dir(storage)?.for_each(|entry| {
-                let entry = entry.expect("enter store, must success");
-                let path = entry
-                    .path()
-                    .canonicalize()
-                    .expect("file path initialize error");
-                let name = entry.file_name().to_string_lossy().to_string();
-                debug!("record secret name from store: {}", name);
-                let content = fs::read(path).expect("reading store, must success");
-                map.insert(name, content);
+        let name_ciphertext_map: HashMap<profile::Secret, Vec<u8>> = {
+            let map = SecretPathMap::init_from(&self).inner();
+            let mut ret = HashMap::new();
+            map.into_iter().for_each(|(s, p)| {
+                let _ = ret.insert(s, p.read_to_cipher_content().expect("read error"));
             });
-            map
+            ret
         };
 
         trace!("{:?}", name_ciphertext_map);
@@ -140,10 +134,11 @@ impl Profile {
 
             let mut the_file_fd = {
                 let mut p = target_extract_dir_with_gen.clone();
-                p.push(n);
+                p.push(n.name);
                 File::create(p)
             }
             .expect("create file error");
+            // TODO: permission and so on
             the_file_fd
                 .write_all(&decrypted)
                 .expect("write decrypted file error")
