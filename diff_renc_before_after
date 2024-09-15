@@ -1,0 +1,8 @@
+29c29
+< storageDirStore = "/nix/store/ach3wbjd8bfinnrx3w20hannag1g91y2-source/./test/secrets/renced/tester"
+---
+> storageDirStore = "/nix/store/wrwpbjp9zp563kihgk3ps5ccylwdsb7f-source/./test/secrets/renced/tester"
+36c36
+< identity = "/nix/store/ach3wbjd8bfinnrx3w20hannag1g91y2-source/test/safekey.txt.pub"
+---
+> identity = "/nix/store/wrwpbjp9zp563kihgk3ps5ccylwdsb7f-source/test/safekey.txt.pub"

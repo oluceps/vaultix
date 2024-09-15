@@ -6,6 +6,7 @@ use spdlog::{debug, info};
 
 use crate::profile::{self, Profile, Settings};
 
+#[derive(Debug)]
 pub struct StoredSecretPath(PathBuf);
 
 pub struct SecretPathMap(HashMap<profile::Secret, StoredSecretPath>);
@@ -65,6 +66,7 @@ impl StoredSecretPath {
     }
 
     pub fn read_to_cipher_content(self) -> eyre::Result<Vec<u8>> {
+        debug!("reading cipher file: {:?}", self.0);
         fs::read(self.0).wrap_err("read cipher file error")
     }
 
