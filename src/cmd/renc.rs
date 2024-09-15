@@ -13,8 +13,8 @@ use crate::profile::{MasterIdentity, Profile, Settings};
 use crate::{interop::add_to_store, profile};
 
 impl profile::Secret {
-    fn to_renced_pathbuf(self, settings: &Settings) -> RencSecretPath {
-        RencSecretPath::init_from(settings, &self)
+    fn to_renced_pathbuf(self, settings: &Settings) -> StoredSecretPath {
+        StoredSecretPath::init_from(settings, &self)
     }
 }
 
@@ -64,7 +64,7 @@ impl NameBufPair {
 
 use age::x25519;
 
-use super::renc_sec_path::RencSecretPath;
+use super::stored_sec_path::StoredSecretPath;
 impl Profile {
     /// Get the `secrets.{}.file`, which in nix store
     pub fn get_cipher_file_paths(&self) -> HashSet<NamePathPair> {

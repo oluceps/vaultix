@@ -6,9 +6,9 @@ use spdlog::{debug, info};
 
 use crate::profile::{self, Settings};
 
-pub struct RencSecretPath(PathBuf);
+pub struct StoredSecretPath(PathBuf);
 
-impl RencSecretPath {
+impl StoredSecretPath {
     pub fn init_from(settings: &Settings, secret: &profile::Secret) -> Self {
         let mut hasher = Sha256::new();
         let Settings {
