@@ -3,7 +3,7 @@ use std::{fs, path::PathBuf};
 use spdlog::prelude::*;
 use {argh::FromArgs, std::fmt::Debug};
 
-mod renc_sec_path;
+mod stored_sec_path;
 
 mod check;
 mod deploy;
