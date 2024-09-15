@@ -91,8 +91,8 @@ impl Profile {
     extract secrets to `/run/vaultix.d/$num` and link to `/run/vaultix`
     */
     pub fn deploy(self) -> Result<()> {
-        // hash-name.age => vec<u8>
-        let name_ciphertext_map: HashMap<profile::Secret, Vec<u8>> = {
+        // secrets => vec<u8>
+        let sec_ciphertext_map: HashMap<profile::Secret, Vec<u8>> = {
             let map = SecretPathMap::init_from(&self).inner();
             let mut ret = HashMap::new();
             map.into_iter().for_each(|(s, p)| {
@@ -101,7 +101,7 @@ impl Profile {
             ret
         };
 
-        trace!("{:?}", name_ciphertext_map);
+        trace!("{:?}", sec_ciphertext_map);
 
         let generation_count = self.init_decrypted_mount_point()?;
 
@@ -118,7 +118,7 @@ impl Profile {
 
         let decrypt_host_ident = &self.get_host_key_identity()?;
 
-        name_ciphertext_map.into_iter().for_each(|(n, c)| {
+        sec_ciphertext_map.into_iter().for_each(|(n, c)| {
             let decryptor = match age::Decryptor::new(&c[..]).expect("parse cipher text error") {
                 age::Decryptor::Recipients(d) => d,
                 _ => unreachable!(),
