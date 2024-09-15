@@ -100,7 +100,7 @@ impl Profile {
         )
     }
 
-    pub fn get_key_pair_list<'a>(
+    pub fn get_key_pair_iter<'a>(
         &'a self,
     ) -> impl Iterator<Item = (Option<x25519::Identity>, Result<x25519::Recipient>)> + 'a {
         use age::x25519;
@@ -147,11 +147,26 @@ impl Profile {
     */
     pub fn renc(self, _all: bool, flake_root: PathBuf) -> Result<()> {
         use age::ssh;
+
+        // check if flake root
+        if !fs::read_dir(&flake_root)?.into_iter().any(|e| {
+            e.is_ok_and(|ie| {
+                ie.file_name()
+                    .into_string()
+                    .is_ok_and(|iie| iie.as_str() == "flake.nix")
+            })
+        }) {
+            error!("please run app in flake root");
+            return Err(eyre!(
+                "`flake.nix` not found here, make sure run in flake toplevel."
+            ));
+        };
+
         let cipher_contents = self.get_cipher_contents();
         let renced_secret_paths: NamePathPairList = self.get_renced_store_paths();
         debug!("secret paths: {:?}", renced_secret_paths);
 
-        let mut key_pair_list = self.get_key_pair_list();
+        let mut key_pair_list = self.get_key_pair_iter();
 
         if let Some(o) = key_pair_list.find(|k| k.0.is_some()) {
             let key = o.0.clone().expect("some");

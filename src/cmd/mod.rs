@@ -75,25 +75,10 @@ impl Args {
             toml::from_str(file.as_str())?
         };
 
-        // Maybe clean first?
         let flake_root = if let Some(f) = &self.flake_root {
             PathBuf::from(f)
         } else {
             std::env::current_dir()?
-        };
-
-        // check flake root
-        if !fs::read_dir(&flake_root)?.into_iter().any(|e| {
-            e.is_ok_and(|ie| {
-                ie.file_name()
-                    .into_string()
-                    .is_ok_and(|iie| iie.as_str() == "flake.nix")
-            })
-        }) {
-            error!("please run app in flake root");
-            return Err(eyre!(
-                "`flake.nix` not found here, make sure run in flake toplevel."
-            ));
         };
 
         trace!("{:#?}", profile);
