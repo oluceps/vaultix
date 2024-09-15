@@ -57,7 +57,7 @@ impl StoredSecretPath {
             debug!("identity hash: {}", ident_hash);
 
             let mut storage_dir_path = PathBuf::from(storage_dir_store);
-            info!("storage dir path prefix: {:?}", storage_dir_path);
+            debug!("storage dir path prefix: {:?}", storage_dir_path);
             storage_dir_path.push(format!("{}-{}.age", ident_hash, name));
             storage_dir_path
         };

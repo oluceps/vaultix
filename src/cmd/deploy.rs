@@ -75,8 +75,8 @@ impl Profile {
                         }
                         Ok(res) => {
                             info!("found mountpoint generation {}", res);
-                            if res > max {
-                                max = res;
+                            if res >= max {
+                                max = res + 1;
                             }
                         }
                     }
@@ -144,8 +144,14 @@ impl Profile {
                 .expect("write decrypted file error")
         });
 
+        let _ = fs::remove_file(self.get_decrypt_dir_path());
         // link back to /run/vaultix
-        std::os::unix::fs::symlink(target_extract_dir_with_gen, self.get_decrypt_dir_path())
+        if std::os::unix::fs::symlink(target_extract_dir_with_gen, self.get_decrypt_dir_path())
             .wrap_err("create symlink error")
+            .is_ok()
+        {
+            info!("deploy secrets success");
+        }
+        Ok(())
     }
 }
