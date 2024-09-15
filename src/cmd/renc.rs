@@ -13,7 +13,7 @@ use crate::profile::{MasterIdentity, Profile, Settings};
 use crate::{interop::add_to_store, profile};
 
 impl profile::Secret {
-    fn to_renced_pathbuf(self, settings: &Settings) -> StoredSecretPath {
+    fn to_renced_store_pathbuf(self, settings: &Settings) -> StoredSecretPath {
         StoredSecretPath::init_from(settings, &self)
     }
 }
@@ -85,12 +85,17 @@ impl Profile {
             .collect()
     }
 
-    pub fn get_renced_paths(&self) -> NamePathPairList {
+    pub fn get_renced_store_paths(&self) -> NamePathPairList {
         NamePathPairList(
             self.secrets
                 .clone()
                 .into_values()
-                .map(|i| NamePathPair(i.to_owned().id, i.to_renced_pathbuf(&self.settings).get()))
+                .map(|i| {
+                    NamePathPair(
+                        i.to_owned().id,
+                        i.to_renced_store_pathbuf(&self.settings).get(),
+                    )
+                })
                 .collect(),
         )
     }
@@ -143,7 +148,7 @@ impl Profile {
     pub fn renc(self, _all: bool, flake_root: PathBuf) -> Result<()> {
         use age::ssh;
         let cipher_contents = self.get_cipher_contents();
-        let renced_secret_paths: NamePathPairList = self.get_renced_paths();
+        let renced_secret_paths: NamePathPairList = self.get_renced_store_paths();
         debug!("secret paths: {:?}", renced_secret_paths);
 
         let mut key_pair_list = self.get_key_pair_list();
