@@ -30,6 +30,8 @@ Prerequisite:
 
 + using flake.
 
++ using nix-command feature
+
 + using flake-parts.
 
 + pass `self` as specialArgs, to `nixosSystem`.
