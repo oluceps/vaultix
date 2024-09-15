@@ -9,12 +9,23 @@ use std::{
 
 use crate::{
     cmd::stored_sec_path::SecretPathMap,
-    profile::{self, Profile},
+    profile::{self, HostKey, Profile},
 };
 
 use age::x25519;
 use eyre::{eyre, Context, Result};
 use spdlog::{debug, error, info, trace};
+
+impl HostKey {
+    pub fn get_identity(&self) -> Result<age::ssh::Identity> {
+        fs::read_to_string(&self.path)
+            .wrap_err_with(|| eyre!("reading ssh host key error: {}", self.path))
+            .and_then(|i| {
+                age::ssh::Identity::from_buffer(i.as_bytes(), Some(String::from("thekey")))
+                    .map_err(|e| eyre!("convert age identity from ssh key error: {}", e))
+            })
+    }
+}
 
 const KEY_TYPE: &str = "ed25519";
 impl Profile {
@@ -35,12 +46,7 @@ impl Profile {
             .iter()
             .find(|i| i.r#type == KEY_TYPE)
         {
-            fs::read_to_string(&k.path)
-                .wrap_err_with(|| eyre!("reading ssh host key error: {}", k.path))
-                .and_then(|i| {
-                    age::ssh::Identity::from_buffer(i.as_bytes(), Some(String::from("thekey")))
-                        .map_err(|e| eyre!("convert age identity from ssh key error: {}", e))
-                })
+            k.get_identity()
         } else {
             Err(eyre!("key with type {} not found", KEY_TYPE))
         }
@@ -74,7 +80,7 @@ impl Profile {
                             error!("parse mount point generation err: {:?}", e)
                         }
                         Ok(res) => {
-                            info!("found mountpoint generation {}", res);
+                            debug!("found mountpoint generation {}", res);
                             if res >= max {
                                 max = res + 1;
                             }
@@ -93,10 +99,14 @@ impl Profile {
     pub fn deploy(self) -> Result<()> {
         // secrets => vec<u8>
         let sec_ciphertext_map: HashMap<profile::Secret, Vec<u8>> = {
-            let map = SecretPathMap::init_from(&self).inner();
+            let map = SecretPathMap::init_from_to_renced_store_path(&self).inner();
             let mut ret = HashMap::new();
             map.into_iter().for_each(|(s, p)| {
-                let _ = ret.insert(s, p.read_to_cipher_content().expect("read error"));
+                let _ = ret.insert(
+                    s,
+                    p.read_hostpubkey_encrypted_cipher_content()
+                        .expect("read error"),
+                );
             });
             ret
         };
@@ -132,6 +142,10 @@ impl Profile {
 
             let _ = reader.read_to_end(&mut decrypted);
 
+            info!(
+                "start deploying {} to generation {}",
+                n.name, generation_count
+            );
             let mut the_file_fd = {
                 let mut p = target_extract_dir_with_gen.clone();
                 p.push(n.name);
@@ -150,7 +164,7 @@ impl Profile {
             .wrap_err("create symlink error")
             .is_ok()
         {
-            info!("deploy secrets success");
+            info!("deployment success");
         }
         Ok(())
     }

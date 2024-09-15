@@ -6,13 +6,42 @@ use spdlog::{debug, info};
 
 use crate::profile::{self, Profile, Settings};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct StoredSecretPath(PathBuf);
 
+#[derive(Debug, Clone)]
 pub struct SecretPathMap(HashMap<profile::Secret, StoredSecretPath>);
 
+pub struct SecretBufferMap(HashMap<profile::Secret, Vec<u8>>);
+
+impl From<SecretPathMap> for SecretBufferMap {
+    fn from(m: SecretPathMap) -> Self {
+        let mut map = HashMap::new();
+        m.inner().into_iter().for_each(|(s, p)| {
+            let v = p.read_hostpubkey_encrypted_cipher_content().unwrap();
+            map.insert(s, v);
+        });
+        Self(map)
+    }
+}
+impl SecretBufferMap {
+    pub fn inner(self) -> HashMap<profile::Secret, Vec<u8>> {
+        self.0
+    }
+}
+
 impl SecretPathMap {
-    pub fn init_from(profile: &Profile) -> Self {
+    pub fn init_from_to_user_ident_encrypted_instore_file(profile: &Profile) -> Self {
+        let mut m = HashMap::new();
+        profile.secrets.iter().for_each(|(_, sec)| {
+            m.insert(
+                sec.clone(),
+                StoredSecretPath(PathBuf::from(sec.file.clone())),
+            );
+        });
+        Self(m)
+    }
+    pub fn init_from_to_renced_store_path(profile: &Profile) -> Self {
         let mut m = HashMap::new();
         profile.secrets.clone().into_values().for_each(|s| {
             m.insert(s.clone(), s.to_renced_store_pathbuf(&profile.settings));
@@ -60,17 +89,18 @@ impl StoredSecretPath {
             let mut storage_dir_path = PathBuf::from(storage_dir_store);
             debug!("storage dir path prefix: {:?}", storage_dir_path);
             storage_dir_path.push(format!("{}-{}.age", ident_hash, name));
+            debug!("added renced credential: {:?}", storage_dir_path);
             storage_dir_path
         };
         Self(secret_file_path)
     }
 
-    pub fn read_to_cipher_content(self) -> eyre::Result<Vec<u8>> {
+    pub fn read_hostpubkey_encrypted_cipher_content(self) -> eyre::Result<Vec<u8>> {
         debug!("reading cipher file: {:?}", self.0);
-        fs::read(self.0).wrap_err("read cipher file error")
+        fs::read(self.0).wrap_err(format!("read cipher file error"))
     }
 
-    pub fn get(self) -> PathBuf {
+    pub fn inner(self) -> PathBuf {
         self.0
     }
 }

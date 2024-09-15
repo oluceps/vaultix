@@ -1,6 +1,8 @@
 - [x] should get entire Secret when deploy
-- [ ] remove renced path while renc 
+- [ ] skip renc
+- [x] remove renced path while renc 
 - [ ] permission set
+- [ ] age plugin
 - [ ] check command
 - [ ] nix integration
 - [ ] feed the toml after renced, thus store path changed
