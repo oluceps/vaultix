@@ -1,5 +1,6 @@
-use std::{fs, path::PathBuf};
+use std::{array::TryFromSliceError, fs, path::PathBuf};
 
+use eyre::{eyre, Context};
 use spdlog::prelude::*;
 use {argh::FromArgs, std::fmt::Debug};
 
@@ -70,7 +71,7 @@ impl Args {
         use super::profile::Profile;
 
         let profile: Profile = {
-            let file = fs::read_to_string(&self.profile)?;
+            let file = fs::read_to_string(&self.profile).wrap_err("arg `profile` not found")?;
             toml::from_str(file.as_str())?
         };
 
@@ -79,6 +80,20 @@ impl Args {
             PathBuf::from(f)
         } else {
             std::env::current_dir()?
+        };
+
+        // check flake root
+        if !fs::read_dir(&flake_root)?.into_iter().any(|e| {
+            e.is_ok_and(|ie| {
+                ie.file_name()
+                    .into_string()
+                    .is_ok_and(|iie| iie.as_str() == "flake.nix")
+            })
+        }) {
+            error!("please run app in flake root");
+            return Err(eyre!(
+                "`flake.nix` not found here, make sure run in flake toplevel."
+            ));
         };
 
         trace!("{:#?}", profile);
