@@ -40,7 +40,7 @@ let
       storageDirStore = mkOption {
         type = types.path;
         readOnly = true;
-        default = "${self}" + "/" + submod.config.storageDirRelative;
+        default = builtins.path { path = "${self}" + "/" + submod.config.storageDirRelative; };
         example = literalExpression ''./. /* <- flake root */ + "/secrets/renced/myhost" /* separate folder for each host */'';
         description = ''
           The local storage directory for rekeyed secrets. MUST be a str of path related to flake root.
