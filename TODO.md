@@ -1,1 +1,4 @@
-- [ ] should get entire Secret when deploy
+- [x] should get entire Secret when deploy
+- [ ] permission set
+- [ ] check command
+- [ ] nix integration

@@ -37,16 +37,6 @@ Prerequisite:
 + pass `self` as specialArgs, to `nixosSystem`.
 
 
-## TODO
-
-- [ ] targets above
-- [ ] impl rust-nix interopt
-- [ ] nixos module
-- [ ] rekey
-- [ ] edit
-- [ ] integrate nix-eval-jobs
-
-
 ## Compatibilities
 
 (Will) Inherited Options:
