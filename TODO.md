@@ -1,5 +1,5 @@
 - [x] should get entire `Secret` when deploy
-- [ ] [renc] calc hash and skip unchanged
+- [x] [renc] calc hash and skip unchanged
 - [x] remove renced path while renc 
 - [ ] apply `Secret` metadata
 - [ ] age plugin
