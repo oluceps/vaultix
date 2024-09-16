@@ -27,8 +27,8 @@ let
     options.systemd ? sysusers && (config.systemd.sysusers.enable || config.services.userborn.enable)
   ) "`systemd.sysusers` or `services.userborn` must be enabled.";
 
-  storage_dir = self + "/" + cfg.settings.storageDirRelative;
-  storageExist = assertMsg (builtins.pathExists (storage_dir)) "${storage_dir} doesn't exist plz create and add to git first (maybe need a placeholder for git to recognize it)";
+  storagePath = self + "/" + cfg.settings.storageDirRelative;
+  storageExist = assertMsg (builtins.pathExists (storagePath)) "${storagePath} doesn't exist plz create and add to git first (maybe need a placeholder for git to recognize it)";
 
   settingsType = types.submodule (submod: {
     options = {
