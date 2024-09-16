@@ -2,7 +2,7 @@ use std::{collections::HashMap, fs, path::PathBuf};
 
 use eyre::Context;
 use sha2::{Digest, Sha256};
-use spdlog::{debug, info};
+use spdlog::{debug, info, trace};
 
 use crate::profile::{self, Profile, Settings};
 
@@ -31,7 +31,7 @@ impl SecretBufferMap {
 }
 
 impl SecretPathMap {
-    pub fn init_from_to_user_ident_encrypted_instore_file(profile: &Profile) -> Self {
+    pub fn init_from_to_user_ident_encrypted_instore(profile: &Profile) -> Self {
         let mut m = HashMap::new();
         profile.secrets.iter().for_each(|(_, sec)| {
             m.insert(
@@ -41,12 +41,42 @@ impl SecretPathMap {
         });
         Self(m)
     }
-    pub fn init_from_to_renced_store_path(profile: &Profile) -> Self {
+    pub fn init_from_to_renced_instore_path(profile: &Profile) -> Self {
         let mut m = HashMap::new();
         profile.secrets.clone().into_values().for_each(|s| {
             m.insert(s.clone(), s.to_renced_store_pathbuf(&profile.settings));
         });
         Self(m)
+    }
+    // v: flakeroot/secrets/renced/tester/hash-name.age
+    pub fn to_flake_repo_relative_renced_path(
+        &self,
+        profile: &Profile,
+        flake_root: PathBuf,
+    ) -> Self {
+        let renc_path = {
+            let mut p = flake_root;
+            p.push(profile.settings.storage_dir_relative.clone());
+            p
+        };
+        let mut m = HashMap::new();
+        profile.secrets.clone().into_values().for_each(|s| {
+            let mut renc_path = renc_path.clone();
+            let name = self
+                .clone()
+                .inner()
+                .get(&s)
+                .unwrap()
+                .0
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+                .to_string();
+            renc_path.push(name);
+            // renc_path.canonicalize().unwrap();
+            m.insert(s, StoredSecretPath(renc_path));
+        });
+        SecretPathMap(m)
     }
     pub fn inner(self) -> HashMap<profile::Secret, StoredSecretPath> {
         self.0
@@ -69,7 +99,7 @@ impl StoredSecretPath {
             hasher.update(host_pubkey);
             format!("{:x}", hasher.clone().finalize())
         };
-        debug!("public key hash: {}", pubkey_hash);
+        trace!("public key hash: {}", pubkey_hash);
 
         let profile::Secret { file, name, .. } = secret;
         // TODO: here the storage_dir_path jiziwa no use
@@ -84,19 +114,19 @@ impl StoredSecretPath {
                 format!("{:x}", hasher.finalize()).split_off(32)
             };
 
-            debug!("identity hash: {}", ident_hash);
+            trace!("identity hash: {}", ident_hash);
 
             let mut storage_dir_path = PathBuf::from(storage_dir_store);
-            debug!("storage dir path prefix: {:?}", storage_dir_path);
+            trace!("storage dir path prefix: {:?}", storage_dir_path);
             storage_dir_path.push(format!("{}-{}.age", ident_hash, name));
-            debug!("added renced credential: {:?}", storage_dir_path);
+            trace!("added renced credential: {:?}", storage_dir_path);
             storage_dir_path
         };
         Self(secret_file_path)
     }
 
     pub fn read_hostpubkey_encrypted_cipher_content(self) -> eyre::Result<Vec<u8>> {
-        debug!("reading cipher file: {:?}", self.0);
+        trace!("reading cipher file: {:?}", self.0);
         fs::read(self.0).wrap_err(format!("read cipher file error"))
     }
 
