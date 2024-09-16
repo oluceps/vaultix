@@ -27,6 +27,9 @@ let
     options.systemd ? sysusers && (config.systemd.sysusers.enable || config.services.userborn.enable)
   ) "`systemd.sysusers` or `services.userborn` must be enabled.";
 
+  storage_dir = self + "/" + cfg.settings.storageDirRelative;
+  storageExist = assertMsg (builtins.pathExists (storage_dir)) "${storage_dir} doesn't exist plz create and add to git first (maybe need a placeholder for git to recognize it)";
+
   settingsType = types.submodule (submod: {
     options = {
 
@@ -40,7 +43,7 @@ let
       storageDirStore = mkOption {
         type = types.path;
         readOnly = true;
-        default = builtins.path { path = "${self}" + "/" + submod.config.storageDirRelative; };
+        default = builtins.path { path = self + "/" + submod.config.storageDirRelative; };
         example = literalExpression ''./. /* <- flake root */ + "/secrets/renced/myhost" /* separate folder for each host */'';
         description = ''
           The local storage directory for rekeyed secrets. MUST be a str of path related to flake root.
@@ -329,7 +332,7 @@ in
     let
       secretsMetadata = (pkgs.formats.toml { }).generate "secretsMetadata" (cfg);
     in
-    mkIf sysusers {
+    mkIf (sysusers && storageExist) {
       test = secretsMetadata;
     };
 }

@@ -1,9 +1,9 @@
-- [x] should get entire Secret when deploy
-- [ ] eval in vaultix to json, reduce requirement
-- [ ] skip renc
+- [x] should get entire `Secret` when deploy
+- [ ] [renc] calc hash and skip unchanged
 - [x] remove renced path while renc 
-- [ ] permission set
+- [ ] apply `Secret` metadata
 - [ ] age plugin
 - [ ] check command
 - [ ] nix integration
 - [ ] feed the toml after renced, thus store path changed
+- [ ] ~~eval in vaultix to json, reduce requirement~~

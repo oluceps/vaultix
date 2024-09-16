@@ -20,12 +20,6 @@ impl profile::Secret {
     }
 }
 
-#[derive(Hash, Debug, Eq, PartialEq)]
-pub struct NamePathPair(String, PathBuf);
-
-#[derive(Hash, Debug, Eq, PartialEq)]
-pub struct NamePathPairList(Vec<NamePathPair>);
-
 use age::x25519;
 
 use super::stored_sec_path::StoredSecretPath;
@@ -49,11 +43,11 @@ impl Profile {
                     let ident = fs::read_to_string(&identity)
                         .map_err(|_| eyre!("reading identity text error"))
                         .and_then(|i| {
-                            // Omit comment
+                            // discard comment
                             i.lines()
                                 .last()
                                 .map(|i| i.to_owned())
-                                .wrap_err(eyre!("some"))
+                                .wrap_err(eyre!("last line of identity file"))
                         })
                         .and_then(|i| {
                             x25519::Identity::from_str(i.as_str())
@@ -72,8 +66,9 @@ impl Profile {
 
     /**
     First decrypt `./secrets/every` with masterIdentity's privkey,
-    Then compare hash with decrypted existing file (using hostKey), encrypt with host public key, output to
-    `./secrets/renced/$host` and add to nix store.
+    Then compare hash with decrypted existing file (using hostKey),
+    encrypt with host public key, output to `./secrets/renced/$host`
+    and add to nix store.
     */
     pub fn renc(self, _all: bool, flake_root: PathBuf) -> Result<()> {
         use age::ssh;
