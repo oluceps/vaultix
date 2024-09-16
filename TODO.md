@@ -1,4 +1,5 @@
 - [x] should get entire Secret when deploy
+- [ ] eval in vaultix to json, reduce requirement
 - [ ] skip renc
 - [x] remove renced path while renc 
 - [ ] permission set
