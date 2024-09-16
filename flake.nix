@@ -16,7 +16,7 @@
   };
 
   outputs =
-    inputs@{ flake-parts, ... }:
+    inputs@{ flake-parts, self, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = with inputs; [
         pre-commit-hooks.flakeModule
@@ -46,6 +46,14 @@
             ];
           };
 
+          vaultix = {
+            nodes = self.nixosConfigurations;
+          };
+          apps.default = {
+            type = "app";
+            program = pkgs.lib.getExe self'.packages.default;
+          };
+
           packages.default =
             let
               toolchain = pkgs.rust-bin.nightly.latest.minimal;
@@ -60,7 +68,10 @@
                 buildPackage
                 ;
             in
-            (buildPackage { src = ./.; });
+            (buildPackage {
+              src = ./.;
+              meta.mainProgram = "vaultix";
+            });
 
           formatter = pkgs.nixfmt-rfc-style;
 
@@ -80,12 +91,14 @@
               nixfmt-rfc-style.enable = true;
             };
           };
+
         };
       flake = {
         overlays.default = final: prev: {
           vaultix = inputs.self.packages.${prev.system}.default;
         };
         nixosModules.default = ./module;
+
       };
     };
 }
