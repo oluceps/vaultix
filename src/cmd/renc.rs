@@ -100,22 +100,27 @@ impl Profile {
         let sec_buf: SecretBufferMap =
             SecretPathMap::init_from_to_user_ident_encrypted_instore(&self).into();
 
+        let decrypt = |buffer: &Vec<u8>, key: &x25519::Identity| -> Vec<u8> {
+            let decryptor = match age::Decryptor::new(&buffer[..]).expect("parse cipher text error")
+            {
+                age::Decryptor::Recipients(d) => d,
+                _ => unreachable!(),
+            };
+
+            let mut decrypted = vec![];
+            let mut reader = decryptor
+                .decrypt(iter::once(key as &dyn age::Identity))
+                .unwrap();
+
+            let _ = reader.read_to_end(&mut decrypted);
+
+            decrypted
+        };
         if let Some(o) = key_pair_list.find(|k| k.0.is_some()) {
             let key = o.0.clone().expect("some");
             let sec_buf = sec_buf.inner();
             let decrypted_iter = sec_buf.iter().filter_map(|(s, b)| {
-                let decryptor = match age::Decryptor::new(&b[..]).expect("parse cipher text error")
-                {
-                    age::Decryptor::Recipients(d) => d,
-                    _ => unreachable!(),
-                };
-
-                let mut decrypted = vec![];
-                let mut reader = decryptor
-                    .decrypt(iter::once(&key as &dyn age::Identity))
-                    .unwrap();
-
-                let _ = reader.read_to_end(&mut decrypted);
+                let decrypted = decrypt(b, &key);
                 Some((s, decrypted))
             });
 
