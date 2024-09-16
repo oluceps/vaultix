@@ -129,10 +129,8 @@ impl Profile {
 
                 let b_hash = blake3::hash(&b);
 
-                debug!("{:?}", m);
                 if let Some(o) = m.inner().get(s) {
                     let flake_renc = fs::read(o.clone().inner());
-                    info!("{:?}", flake_renc);
                     if let Ok(c) = flake_renc {
                         trace!("checking hash{:?}", c);
 
@@ -187,19 +185,14 @@ impl Profile {
             // fs::create_dir_all(&renc_path)?;
             let ren = SecretPathMap::init_from_to_renced_instore_path(&self).inner();
             encrypted_iter.for_each(|(s, b)| {
-                // let base_path = sec_path.clone().inner().get(s).cloned();
-
                 let mut to_create = renc_path.clone();
 
-                // if let Some(n) = base_path {
-                // get store path from to_renced
                 let renced_store_path = ren.get(s).cloned().unwrap().inner();
                 to_create.push(renced_store_path.file_name().unwrap());
 
                 debug!("path string {:?}", to_create);
                 let mut fd = File::create(to_create).expect("create file error");
                 let _ = fd.write_all(&b[..]);
-                // }
             });
 
             let o = add_to_store(renc_path)?;
