@@ -1664,6 +1664,8 @@ dependencies = [
  "argh",
  "blake3",
  "eyre",
+ "libc",
+ "nom",
  "serde",
  "sha2",
  "spdlog-rs",

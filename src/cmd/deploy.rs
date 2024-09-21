@@ -1,14 +1,16 @@
 use std::{
     collections::HashMap,
-    fs::{self, DirEntry, File, ReadDir},
+    fs::{self, DirEntry, File, OpenOptions, Permissions, ReadDir},
     io::{ErrorKind, Read, Write},
     iter,
+    os::unix::fs::PermissionsExt,
     path::{Path, PathBuf},
     str::FromStr,
 };
 
 use crate::{
     cmd::stored_sec_path::SecretPathMap,
+    helper,
     profile::{self, HostKey, Profile},
 };
 
@@ -146,14 +148,24 @@ impl Profile {
                 "start deploying {} to generation {}",
                 n.name, generation_count
             );
-            let mut the_file_fd = {
+            let mut the_file = {
                 let mut p = target_extract_dir_with_gen.clone();
                 p.push(n.name);
-                File::create(p)
-            }
-            .expect("create file error");
+
+                let mode = helper::parse_permission::parse_octal_string(&n.mode).unwrap();
+                let permissions = Permissions::from_mode(mode);
+
+                let file = OpenOptions::new().create(true).write(true).open(p).unwrap();
+
+                file.set_permissions(permissions).unwrap();
+
+                helper::set_owner_group::set_owner_and_group(&file, &n.owner, &n.group)
+                    .expect("good report");
+
+                file
+            };
             // TODO: permission and so on
-            the_file_fd
+            the_file
                 .write_all(&decrypted)
                 .expect("write decrypted file error")
         });

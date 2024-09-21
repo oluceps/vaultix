@@ -8,6 +8,8 @@ age = {version = "0.10.0",features = ["ssh"]}
 argh = "0.1.12"
 blake3 = "1.5.4"
 eyre = "0.6.12"
+libc = "0.2.158"
+nom = "7.1.3"
 serde = "1.0.210"
 sha2 = "0.10.8"
 spdlog-rs = "0.3.13"

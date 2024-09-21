@@ -2,6 +2,7 @@ use cmd::Args;
 use eyre::Result;
 
 mod cmd;
+mod helper;
 mod interop;
 mod profile;
 
