@@ -7,7 +7,7 @@
 }:
 let
   inherit (pkgs) writeShellScriptBin;
-  inherit (pkgs.lib) concatStringsSep traceVal;
+  inherit (pkgs.lib) concatStringsSep;
   inherit (builtins) attrValues;
 
   vaultixs = map (n: n.config.vaultix) (attrValues nodes);
@@ -19,9 +19,9 @@ writeShellScriptBin "renc" (
     map (
       n:
       let
-        a = (pkgs.formats.toml { }).generate "secretsMetadata" n;
+        profile = (pkgs.formats.toml { }).generate "secretsMetadata" n;
       in
-      "${bin} ${a} renc"
+      "${bin} ${profile} renc"
     ) vaultixs
   )
 )

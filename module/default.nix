@@ -13,6 +13,7 @@ let
     isAttrs
     isPath
     readFile
+    mkPackageOption
     literalExpression
     mkEnableOption
     mkIf
@@ -310,6 +311,8 @@ in
 {
   options.vaultix = {
 
+    package = mkPackageOption pkgs "vaultix" { };
+
     settings = mkOption {
       type = settingsType;
       default = { };
@@ -330,9 +333,21 @@ in
 
   config =
     let
-      secretsMetadata = (pkgs.formats.toml { }).generate "secretsMetadata" (cfg);
+      profile = (pkgs.formats.toml { }).generate "secretsMetadata" (cfg);
     in
     mkIf (sysusers && storageExist) {
-      test = secretsMetadata;
+      test = profile;
+
+      systemd.services.agenix-install-secrets = {
+        wantedBy = [ "sysinit.target" ];
+        after = [ "systemd-sysusers.service" ];
+        unitConfig.DefaultDependencies = "no";
+
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = "${lib.getExe cfg.package} ${profile} deploy";
+          RemainAfterExit = true;
+        };
+      };
     };
 }

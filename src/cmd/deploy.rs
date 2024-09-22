@@ -164,7 +164,6 @@ impl Profile {
 
                 file
             };
-            // TODO: permission and so on
             the_file
                 .write_all(&decrypted)
                 .expect("write decrypted file error")

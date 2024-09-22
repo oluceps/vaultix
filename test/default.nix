@@ -22,6 +22,11 @@
           specialArgs = {
             inherit self;
           };
+          pkgs = import inputs.nixpkgs {
+            inherit system;
+            config = { };
+            overlays = [ self.overlays.default ];
+          };
           modules = [
             ./configuration.nix
             ./UEFI
