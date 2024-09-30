@@ -209,8 +209,9 @@ impl Profile {
             }
             // Another side, calculate with nix `builtins.path` and pass to when deploy as `storage`
             info!("path added to store: {}", String::from_utf8(o.stdout)?);
+        } else {
+            return Err(eyre!("error finding usable master identity"));
         };
-
         Ok(())
     }
 }
