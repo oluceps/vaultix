@@ -13,7 +13,8 @@
       hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEu8luSFCts3g367nlKBrxMdLyOy4Awfo5Rb397ef2AR elen@kaambl";
       masterIdentities = [
         # This indeed not safe since it has not password protection ;
-        ./safekey.txt.pub
+        # ./safekey.txt.pub
+        ./age-yubikey-identity-7d5d5540.txt.pub
 
         # "/somewhere/priv"
 

@@ -24,6 +24,7 @@ use age::x25519;
 
 use super::stored_sec_path::StoredSecretPath;
 impl Profile {
+    // TODO: plugin compatibility
     pub fn get_key_pair_iter<'a>(
         &'a self,
     ) -> impl Iterator<Item = (Option<x25519::Identity>, Result<x25519::Recipient>)> + 'a {
@@ -116,6 +117,8 @@ impl Profile {
 
             decrypted
         };
+
+        // WARN: this failed while using plugin
         if let Some(o) = key_pair_list.find(|k| k.0.is_some()) {
             let key = o.0.clone().expect("some");
             let sec_buf = sec_buf.inner();
