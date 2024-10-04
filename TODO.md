@@ -1,3 +1,4 @@
+- [ ] vaultix.d in ramfs
 - [ ] age plugin
 - [ ] check command
 - [x] should get entire `Secret` when deploy
