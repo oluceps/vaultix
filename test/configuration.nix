@@ -46,6 +46,7 @@
   };
   services.openssh.hostKeys = [
     {
+      # temporary, and insecure.
       path = ./ssh_key;
       type = "ed25519";
     }
