@@ -70,25 +70,16 @@ impl Profile {
             SecretPathMap::init_from_to_user_ident_encrypted_instore(&self).into();
 
         let decrypt = |buffer: &Vec<u8>, key: &dyn Identity| -> Result<Vec<u8>> {
-            let decryptor = match age::Decryptor::new(&buffer[..]).expect("parse cipher text error")
-            {
-                age::Decryptor::Recipients(d) => d,
-                _ => unreachable!(),
-            };
+            let ctx = {
+                let decryptor = age::Decryptor::new(&buffer[..])?;
 
-            let mut decrypted = vec![];
-            let r = decryptor
-                .decrypt(iter::once(key))
-                .map_err(|e| eyre!("decrypt error: {}", e))
-                .and_then(|mut s_r| {
-                    s_r.read_to_end(&mut decrypted)
-                        .map_err(|e| eyre!("error during decrypt: {}", e))
-                });
-            if let Ok(u) = r {
-                debug!("total decrypted {} bytes", u);
-                return Ok(decrypted);
-            }
-            Err(eyre!("decrypt fail: {:?}", r))
+                let mut decrypted = vec![];
+                let mut reader = decryptor.decrypt(iter::once(key as &dyn age::Identity))?;
+                reader.read_to_end(&mut decrypted);
+
+                decrypted
+            };
+            Err(eyre!("decrypt fail"))
         };
 
         // WARN: this failed while using plugin
@@ -123,30 +114,28 @@ impl Profile {
             if let Some(o) = m.inner().get(s) {
                 let flake_renc = fs::read(o.clone().inner());
                 if let Ok(c) = flake_renc {
+                    let ctx = {
+                        let decryptor = age::Decryptor::new(&c[..]).expect("");
+
+                        let mut decrypted = vec![];
+                        let mut reader = decryptor
+                            .decrypt(iter::once(
+                                &self
+                                    .settings
+                                    .host_keys
+                                    .get(0)
+                                    .unwrap()
+                                    .get_identity()
+                                    .unwrap() as &dyn age::Identity,
+                            ))
+                            .expect("decrypt fail");
+                        reader.read_to_end(&mut decrypted);
+
+                        decrypted
+                    };
                     trace!("checking hash{:?}", c);
 
-                    let decryptor =
-                        match age::Decryptor::new(&c[..]).expect("parse cipher text error") {
-                            age::Decryptor::Recipients(d) => d,
-                            _ => unreachable!(),
-                        };
-
-                    let mut c_decrypted = vec![];
-                    let mut reader = decryptor
-                        .decrypt(iter::once(
-                            &self
-                                .settings
-                                .host_keys
-                                .get(0)
-                                .unwrap()
-                                .get_identity()
-                                .unwrap() as &dyn age::Identity,
-                        ))
-                        .unwrap();
-
-                    let _ = reader.read_to_end(&mut c_decrypted);
-
-                    let c_hash = blake3::hash(&c_decrypted);
+                    let c_hash = blake3::hash(&ctx);
                     trace!("hash: prev {} after {}", c_hash, b_hash);
                     if c_hash == b_hash {
                         // skip
@@ -156,7 +145,7 @@ impl Profile {
                 }
             }
 
-            let encryptor = age::Encryptor::with_recipients(vec![Box::new(recip_unwrap.clone())])
+            let encryptor = age::Encryptor::with_recipients(iter::once(&recip_unwrap as _))
                 .expect("a recipient");
             let mut out_buf = vec![];
 

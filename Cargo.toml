@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-age = {version = "0.10.0",features = ["ssh", "plugin"]}
+age = { git = "https://github.com/str4d/rage.git", branch = "main", features = ["ssh", "plugin"]}
 argh = "0.1.12"
 blake3 = "1.5.4"
 console = "0.15.8"

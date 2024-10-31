@@ -131,18 +131,17 @@ impl Profile {
         let decrypt_host_ident = &self.get_host_key_identity()?;
 
         sec_ciphertext_map.into_iter().for_each(|(n, c)| {
-            let decryptor = match age::Decryptor::new(&c[..]).expect("parse cipher text error") {
-                age::Decryptor::Recipients(d) => d,
-                _ => unreachable!(),
+            let decrypted = {
+                let decryptor = age::Decryptor::new(&c[..]).expect("parse cipher text error");
+
+                let mut decrypted = vec![];
+                let mut reader = decryptor
+                    .decrypt(iter::once(decrypt_host_ident as &dyn age::Identity))
+                    .expect("some");
+                reader.read_to_end(&mut decrypted);
+
+                decrypted
             };
-
-            let mut decrypted = vec![];
-
-            let mut reader = decryptor
-                .decrypt(iter::once(decrypt_host_ident as &dyn age::Identity))
-                .unwrap();
-
-            let _ = reader.read_to_end(&mut decrypted);
 
             info!(
                 "start deploying {} to generation {}",
