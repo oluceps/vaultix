@@ -27,7 +27,7 @@ pub struct Settings {
     pub decrypted_dir: String,
     pub decrypted_mount_point: String,
     pub host_identifier: String,
-    pub extraEncryption_pubkeys: Vec<String>,
+    pub extra_receipients: Vec<String>,
     pub host_pubkey: String,
     pub host_keys: Vec<HostKey>,
     pub storage_dir_relative: String,

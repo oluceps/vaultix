@@ -1,3 +1,4 @@
+localFlake:
 {
   lib,
   self,
@@ -29,6 +30,7 @@ in
               app:
               import ./apps/${app}.nix {
                 inherit (config'.vaultix) nodes pkgs;
+                package = localFlake.packages.${system}.default;
                 userFlake' = self;
                 inherit system;
               }
@@ -59,13 +61,6 @@ in
             description = "The package set to use when defining agenix-rekey scripts.";
             default = pkgs;
             defaultText = lib.literalExpression "pkgs # (module argument)";
-          };
-          package = mkOption {
-            type = types.package;
-            default = config.vaultix.pkgs.callPackage self.packages.${pkgs.system}.default;
-            # defaultText = "<agenix script derivation from agenix-rekey>";
-            readOnly = true;
-            description = '''';
           };
         };
       }

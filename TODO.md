@@ -1,11 +1,14 @@
+- [ ] remote machine, compare hash, needs host priv key
+- [ ] [edit] extra encrypt key
+- [ ] deploy to other directory
+- [ ] check command
 - [x] vaultix.d in ramfs
 - [x] vaultix{,.d} permission
-- [x] age plugin
-- [ ] check command
+- [x] rage plugin support
 - [x] should get entire `Secret` when deploy
 - [x] [renc] calc hash and skip unchanged
 - [x] remove renced path while renc 
 - [x] apply `Secret` metadata
 - [x] nix integration
-- [ ] feed the toml after renced, thus store path changed
+- [ ] ~~feed the toml after renced, thus store path changed~~
 - [ ] ~~eval in vaultix to json, reduce requirement~~

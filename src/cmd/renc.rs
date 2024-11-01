@@ -25,7 +25,6 @@ use age::{x25519, Identity};
 use super::stored_sec_path::StoredSecretPath;
 use crate::helper::parse_identity::ParsedIdentity;
 impl Profile {
-    // TODO: plugin compatibility
     pub fn get_key_pair_iter<'a>(&'a self) -> impl Iterator<Item = Result<ParsedIdentity>> + 'a {
         self.settings
             .master_identities
@@ -127,7 +126,7 @@ impl Profile {
                             .decrypt(iter::once(
                                 &self
                                     .settings
-                                    .host_keys
+                                    .host_keys // TODO: cannot compare on remote machine
                                     .get(0)
                                     .unwrap()
                                     .get_identity()

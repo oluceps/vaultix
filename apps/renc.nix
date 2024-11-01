@@ -1,8 +1,8 @@
 {
   nodes,
-  userFlake',
   pkgs,
   system,
+  package,
   ...
 }:
 let
@@ -11,7 +11,7 @@ let
   inherit (builtins) attrValues;
 
   vaultixs = map (n: n.config.vaultix) (attrValues nodes);
-  bin = pkgs.lib.getExe userFlake'.packages.${system}.default;
+  bin = pkgs.lib.getExe package;
 
 in
 writeShellScriptBin "renc" (
