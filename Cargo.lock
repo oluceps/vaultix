@@ -40,7 +40,7 @@ dependencies = [
 [[package]]
 name = "age"
 version = "0.10.0"
-source = "git+https://github.com/str4d/rage.git?branch=main#baf277a749c839e49f93bffb58d36734ac94be83"
+source = "git+https://github.com/str4d/rage.git?rev=baf277a749c839e49f93bffb58d36734ac94be83#baf277a749c839e49f93bffb58d36734ac94be83"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -76,7 +76,7 @@ dependencies = [
 [[package]]
 name = "age-core"
 version = "0.10.0"
-source = "git+https://github.com/str4d/rage.git?branch=main#baf277a749c839e49f93bffb58d36734ac94be83"
+source = "git+https://github.com/str4d/rage.git?rev=baf277a749c839e49f93bffb58d36734ac94be83#baf277a749c839e49f93bffb58d36734ac94be83"
 dependencies = [
  "base64",
  "chacha20poly1305",

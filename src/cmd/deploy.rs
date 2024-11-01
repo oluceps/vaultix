@@ -23,7 +23,7 @@ impl HostKey {
         fs::read_to_string(&self.path)
             .wrap_err_with(|| eyre!("reading ssh host key error: {}", self.path))
             .and_then(|i| {
-                age::ssh::Identity::from_buffer(i.as_bytes(), Some(String::from("thekey")))
+                age::ssh::Identity::from_buffer(i.as_bytes(), None)
                     .map_err(|e| eyre!("convert age identity from ssh key error: {}", e))
             })
     }
@@ -138,7 +138,9 @@ impl Profile {
                 let mut reader = decryptor
                     .decrypt(iter::once(decrypt_host_ident as &dyn age::Identity))
                     .expect("some");
-                reader.read_to_end(&mut decrypted);
+                if let Err(e) = reader.read_to_end(&mut decrypted) {
+                    error!("{}", e)
+                };
 
                 decrypted
             };

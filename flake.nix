@@ -4,11 +4,11 @@
   inputs = {
     flake-parts.url = "github:hercules-ci/flake-parts";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    crane.url = "github:ipetkov/crane";
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    naersk.url = "github:nix-community/naersk";
     pre-commit-hooks = {
       url = "github:cachix/pre-commit-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -16,7 +16,12 @@
   };
 
   outputs =
-    inputs@{ flake-parts, self, ... }:
+    inputs@{
+      flake-parts,
+      self,
+      crane,
+      ...
+    }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = with inputs; [
         pre-commit-hooks.flakeModule
@@ -30,9 +35,9 @@
       ];
       perSystem =
         {
-          config,
+          # config,
           self',
-          inputs',
+          # inputs',
           pkgs,
           system,
           ...
@@ -57,19 +62,11 @@
           packages.default =
             let
               toolchain = pkgs.rust-bin.nightly.latest.minimal;
-              inherit (pkgs) callPackage lib;
-              inherit
-                (callPackage inputs.naersk (
-                  lib.genAttrs [
-                    "cargo"
-                    "rustc"
-                  ] (n: toolchain)
-                ))
-                buildPackage
-                ;
+              craneLib = (crane.mkLib pkgs).overrideToolchain toolchain;
+              inherit (craneLib) buildPackage;
             in
             (buildPackage {
-              src = ./.;
+              src = craneLib.cleanCargoSource ./.;
               meta.mainProgram = "vaultix";
             });
 

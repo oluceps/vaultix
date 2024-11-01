@@ -70,16 +70,16 @@ impl Profile {
             SecretPathMap::init_from_to_user_ident_encrypted_instore(&self).into();
 
         let decrypt = |buffer: &Vec<u8>, key: &dyn Identity| -> Result<Vec<u8>> {
-            let ctx = {
-                let decryptor = age::Decryptor::new(&buffer[..])?;
+            let decryptor = age::Decryptor::new(&buffer[..])?;
 
-                let mut decrypted = vec![];
-                let mut reader = decryptor.decrypt(iter::once(key as &dyn age::Identity))?;
-                reader.read_to_end(&mut decrypted);
+            let mut decrypted = vec![];
+            let mut reader = decryptor.decrypt(iter::once(key as &dyn age::Identity))?;
+            let res = reader.read_to_end(&mut decrypted);
+            if let Ok(b) = res {
+                debug!("decrypted secret {} bytes", b);
+            }
 
-                decrypted
-            };
-            Err(eyre!("decrypt fail"))
+            Ok(decrypted)
         };
 
         // WARN: this failed while using plugin
@@ -107,7 +107,12 @@ impl Profile {
         let encrypted_iter = decrypted_iter.filter_map(|(s, b)| {
             let m = SecretPathMap::init_from_to_renced_instore_path(&self)
                 .to_flake_repo_relative_renced_path(&self, flake_root.clone());
-            let buffer = b.unwrap();
+            let buffer = if let Err(e) = b {
+                error!("{}", e);
+                return None;
+            } else {
+                b.expect("there")
+            };
 
             let b_hash = blake3::hash(&buffer);
 
@@ -129,7 +134,10 @@ impl Profile {
                                     .unwrap() as &dyn age::Identity,
                             ))
                             .expect("decrypt fail");
-                        reader.read_to_end(&mut decrypted);
+                        let res = reader.read_to_end(&mut decrypted);
+                        if let Ok(b) = res {
+                            debug!("decrypted secret in store: {} bytes", b);
+                        }
 
                         decrypted
                     };
