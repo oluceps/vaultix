@@ -96,6 +96,8 @@
 
         };
       flake = {
+        flakeModule = ./flake-module.nix;
+
         overlays.default = final: prev: {
           vaultix = inputs.self.packages.${prev.system}.default;
         };
