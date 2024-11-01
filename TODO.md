@@ -1,5 +1,6 @@
 - [ ] vaultix.d in ramfs
-- [ ] age plugin
+- [ ] vaultix{,.d} permission
+- [x] age plugin
 - [ ] check command
 - [x] should get entire `Secret` when deploy
 - [x] [renc] calc hash and skip unchanged

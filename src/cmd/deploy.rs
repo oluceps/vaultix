@@ -16,7 +16,8 @@ use crate::{
 
 use age::x25519;
 use eyre::{eyre, Context, Result};
-use spdlog::{debug, error, info, trace};
+use spdlog::{debug, error, info, trace, warn};
+use sys_mount::{Mount, MountFlags, SupportedFilesystems};
 
 impl HostKey {
     pub fn get_identity(&self) -> Result<age::ssh::Identity> {
@@ -58,12 +59,31 @@ impl Profile {
         let mut max = 0;
         let res = match self.read_decrypted_mount_point() {
             Err(e) if e.kind() == ErrorKind::NotFound => {
-                fs::create_dir_all(self.get_decrypted_mount_point_path()).wrap_err_with(|| {
+                // TODO: noswap mount tmpfs
+                let support_ramfs =
+                    SupportedFilesystems::new().and_then(|fss| Ok(fss.is_supported("ramfs")));
+                if !support_ramfs? {
+                    let err =
+                        "ramfs not supported! Refusing extract secret since it will write to disk";
+                    error!("{}", err);
+                    return Err(eyre!(err));
+                }
+                let path = self.get_decrypted_mount_point_path();
+                info!("creating mount point {}", path.clone());
+                fs::create_dir_all(path.clone()).wrap_err_with(|| {
                     format!(
                         "creating decrypted mountpoint: {:?}",
                         self.get_decrypted_mount_point_path()
                     )
-                })
+                })?;
+                Mount::builder()
+                    .fstype("ramfs")
+                    .flags(MountFlags::NOSUID)
+                    .data("relatime")
+                    .data("mode=751")
+                    .mount(String::default(), self.get_decrypted_mount_point_path())
+                    .map(|_| ()) // not needed.
+                    .wrap_err(eyre!("mount tmpfs error"))
             }
             Err(e) => {
                 error!("{}", e);
@@ -106,8 +126,7 @@ impl Profile {
             map.into_iter().for_each(|(s, p)| {
                 let _ = ret.insert(
                     s,
-                    p.read_hostpubkey_encrypted_cipher_content()
-                        .expect("read error"),
+                    p.read_hostpubkey_encrypted_cipher_content().expect("error"),
                 );
             });
             ret
@@ -123,9 +142,16 @@ impl Profile {
 
             debug!("target extract dir with generation number: {:?}", p);
 
-            fs::create_dir_all(&p).map(|_| p).wrap_err(eyre!(
-                "cannot create target extract dir with generation number"
-            ))?
+            fs::create_dir_all(&p)
+                .map(|_| p)
+                .wrap_err(eyre!(
+                    "cannot create target extract dir with generation number"
+                ))
+                .and_then(|p| {
+                    let _ = fs::set_permissions(&p, Permissions::from_mode(0o751))
+                        .wrap_err(eyre!("set permission"));
+                    Ok(p)
+                })?
         };
 
         let decrypt_host_ident = &self.get_host_key_identity()?;
@@ -145,10 +171,7 @@ impl Profile {
                 decrypted
             };
 
-            info!(
-                "start deploying {} to generation {}",
-                n.name, generation_count
-            );
+            info!("{} -> generation {}", n.name, generation_count);
             let mut the_file = {
                 let mut p = target_extract_dir_with_gen.clone();
                 p.push(n.name);

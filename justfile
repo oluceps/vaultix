@@ -15,3 +15,8 @@ eval-json:
 
 init-storage:
     mkdir -p test/secrets/renced/tester
+clean-exist-deploy:
+    #!/usr/bin/env nu
+    sudo umount /run/vaultix.d
+    sudo rm -r /run/vaultix.d
+    sudo rm -r /run/vaultix

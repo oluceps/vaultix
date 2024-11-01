@@ -67,6 +67,9 @@
             in
             (buildPackage {
               src = craneLib.cleanCargoSource ./.;
+              nativeBuildInputs = [
+                pkgs.rustPlatform.bindgenHook
+              ];
               meta.mainProgram = "vaultix";
             });
 
@@ -76,6 +79,8 @@
             inputsFrom = [
               pkgs.vaultix
             ];
+
+            RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
             buildInputs = with pkgs; [
               just
               nushell
