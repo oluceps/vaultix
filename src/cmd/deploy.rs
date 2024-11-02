@@ -121,7 +121,7 @@ impl Profile {
     pub fn deploy(self) -> Result<()> {
         // secrets => vec<u8>
         let sec_ciphertext_map: HashMap<profile::Secret, Vec<u8>> = {
-            let map = SecretPathMap::init_from_to_renced_instore_path(&self).inner();
+            let map = SecretPathMap::from_profile(&self).inner();
             let mut ret = HashMap::new();
             map.into_iter().for_each(|(s, p)| {
                 let _ = ret.insert(

@@ -1,3 +1,4 @@
+#![feature(iterator_try_collect)]
 use cmd::Args;
 use eyre::Result;
 

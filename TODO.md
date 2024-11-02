@@ -1,7 +1,7 @@
 - [ ] remote machine, compare hash, needs host priv key
 - [ ] [edit] extra encrypt key
 - [ ] deploy to other directory
-- [ ] check command
+- [x] check command
 - [x] vaultix.d in ramfs
 - [x] vaultix{,.d} permission
 - [x] rage plugin support

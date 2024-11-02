@@ -266,17 +266,21 @@ in
   config =
     let
       profile = (pkgs.formats.toml { }).generate "secretsMetadata" cfg;
+      checkRencSecsReport =
+        pkgs.runCommandNoCCLocal "secret-check-report" { }
+          "${lib.getExe cfg.package} ${profile} check > $out";
     in
     mkIf (sysusers && storageExist) {
-      test = profile;
-
       systemd.services.vaultix-install-secrets = {
         wantedBy = [ "sysinit.target" ];
         after = [ "systemd-sysusers.service" ];
         unitConfig.DefaultDependencies = "no";
         serviceConfig = {
           Type = "oneshot";
-          Environment = [ ("storage:" + cfg.settings.storageDirStore) ];
+          Environment = [
+            ("storage:" + cfg.settings.storageDirStore)
+            checkRencSecsReport
+          ];
           ExecStart = "${lib.getExe cfg.package} ${profile} deploy";
           RemainAfterExit = true;
         };

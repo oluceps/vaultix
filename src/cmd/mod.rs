@@ -93,7 +93,12 @@ impl Args {
                 profile.deploy()
             }
             SubCmd::Edit(_) => todo!(),
-            SubCmd::Check(_) => todo!(),
+            SubCmd::Check(_) => {
+                info!("start checking");
+                profile.check()?;
+                info!("check complete");
+                Ok(())
+            }
         }
     }
 }

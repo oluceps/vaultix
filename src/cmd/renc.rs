@@ -14,12 +14,6 @@ use crate::{
 };
 use crate::{interop::add_to_store, profile};
 
-impl profile::Secret {
-    pub fn to_renced_store_pathbuf(self, settings: &Settings) -> StoredSecretPath {
-        StoredSecretPath::init_from(settings, &self)
-    }
-}
-
 use age::{x25519, Identity};
 
 use super::stored_sec_path::StoredSecretPath;
@@ -33,6 +27,8 @@ impl Profile {
     }
 
     /**
+    read secret metadata from profile
+
     First decrypt `./secrets/every` with masterIdentity's privkey,
     Then compare hash with decrypted existing file (using hostKey),
     encrypt with host public key, output to `./secrets/renced/$host`
@@ -40,6 +36,7 @@ impl Profile {
     */
     pub fn renc(self, _all: bool, flake_root: PathBuf) -> Result<()> {
         use age::ssh;
+        let mut key_pair_list = self.get_key_pair_iter();
 
         // check if flake root
         if !fs::read_dir(&flake_root)?.into_iter().any(|e| {
@@ -55,18 +52,19 @@ impl Profile {
             ));
         };
 
+        // absolute path, in config directory, suffix host ident
         let renc_path = {
             let mut p = flake_root.clone();
             p.push(self.settings.storage_dir_relative.clone());
             info!(
-                "reading user identity encrypted dir under flake root: {:?}",
-                p
+                "reading user identity encrypted dir under flake root: {}",
+                p.display()
             );
             p
         };
-        let mut key_pair_list = self.get_key_pair_iter();
-        let sec_buf: SecretBufferMap =
-            SecretPathMap::init_from_to_user_ident_encrypted_instore(&self).into();
+
+        // from secrets metadata, read real config store
+        let sec_buf: SecretBufferMap = SecretPathMap::from_secret_set(&self.secrets).into();
 
         let decrypt = |buffer: &Vec<u8>, key: &dyn Identity| -> Result<Vec<u8>> {
             let decryptor = age::Decryptor::new(&buffer[..])?;
@@ -104,7 +102,7 @@ impl Profile {
         let recip_unwrap = recip_host_pubkey.unwrap();
 
         let encrypted_iter = decrypted_iter.filter_map(|(s, b)| {
-            let m = SecretPathMap::init_from_to_renced_instore_path(&self)
+            let m = SecretPathMap::from_profile(&self)
                 .to_flake_repo_relative_renced_path(&self, flake_root.clone());
             let buffer = if let Err(e) = b {
                 error!("{}", e);
@@ -167,9 +165,7 @@ impl Profile {
         trace!("re encrypted: {:?}", encrypted_iter);
 
         info!("cleaning old re-encryption extract dir");
-        // let _ = fs::remove_dir_all(&renc_path);
-        // fs::create_dir_all(&renc_path)?;
-        let ren = SecretPathMap::init_from_to_renced_instore_path(&self).inner();
+        let ren = SecretPathMap::from_profile(&self).inner();
         encrypted_iter.for_each(|(s, b)| {
             let mut to_create = renc_path.clone();
 

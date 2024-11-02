@@ -20,3 +20,9 @@ subtle = "2.6.1"
 sys-mount = "3.0.1"
 tempdir = "0.3.7"
 toml = "0.8.19"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"

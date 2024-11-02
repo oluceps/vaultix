@@ -1,138 +1,116 @@
-use std::{collections::HashMap, fs, path::PathBuf};
+use std::{
+    collections::HashMap,
+    fs::{self, File},
+    io::Read,
+    path::{Path, PathBuf},
+};
 
-use eyre::Context;
-use sha2::{Digest, Sha256};
-use spdlog::{debug, info, trace};
+use eyre::{Context, ContextCompat};
 
-use crate::profile::{self, Profile, Settings};
+use crate::profile::{self, Profile, SecretSet, Settings};
+use eyre::{eyre, Result};
+use std::marker::PhantomData;
 
 #[derive(Debug, Clone)]
-pub struct StoredSecretPath(PathBuf);
+pub struct SecretPath<P: AsRef<Path>, T> {
+    path: P,
+    _marker: PhantomData<T>,
+}
+
+pub struct InStore;
+pub struct InCfg;
+
+pub trait GetSec {
+    fn read_buffer(&self) -> Result<Vec<u8>>;
+    fn open_file(&self) -> Result<File>;
+}
+
+impl<P, T> SecretPath<P, T>
+where
+    P: AsRef<Path>,
+{
+    pub fn new(path: P) -> Self {
+        SecretPath {
+            path,
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<P, T> GetSec for SecretPath<P, T>
+where
+    P: AsRef<Path>,
+{
+    fn open_file(&self) -> Result<File> {
+        File::open(&self.path).wrap_err_with(|| eyre!("open secret file error"))
+    }
+
+    fn read_buffer(&self) -> Result<Vec<u8>> {
+        let mut f = self.open_file()?;
+        let mut buffer = Vec::new();
+        f.read_to_end(&mut buffer)
+            .wrap_err_with(|| eyre!("read secret file error"))?;
+        Ok(buffer)
+    }
+}
+
+impl FromIterator<(profile::Secret, Vec<u8>)> for SecretPathMap<Vec<u8>> {
+    fn from_iter<I: IntoIterator<Item = (profile::Secret, Vec<u8>)>>(iter: I) -> Self {
+        let map = HashMap::from_iter(iter);
+        SecretPathMap(map)
+    }
+}
+impl FromIterator<(profile::Secret, blake3::Hash)> for SecretPathMap<blake3::Hash> {
+    fn from_iter<I: IntoIterator<Item = (profile::Secret, blake3::Hash)>>(iter: I) -> Self {
+        let map = HashMap::from_iter(iter);
+        SecretPathMap(map)
+    }
+}
 
 #[derive(Debug, Clone)]
-pub struct SecretPathMap(HashMap<profile::Secret, StoredSecretPath>);
+pub struct SecretPathMap<P>(HashMap<profile::Secret, P>);
 
-pub struct SecretBufferMap(HashMap<profile::Secret, Vec<u8>>);
-
-impl From<SecretPathMap> for SecretBufferMap {
-    fn from(m: SecretPathMap) -> Self {
-        let mut map = HashMap::new();
-        m.inner().into_iter().for_each(|(s, p)| {
-            let v = p.read_hostpubkey_encrypted_cipher_content().unwrap();
-            map.insert(s, v);
-        });
-        Self(map)
-    }
-}
-impl SecretBufferMap {
-    pub fn inner(self) -> HashMap<profile::Secret, Vec<u8>> {
+impl<T> SecretPathMap<T> {
+    pub fn inner(self) -> HashMap<profile::Secret, T> {
         self.0
     }
 }
 
-impl SecretPathMap {
-    pub fn init_from_to_user_ident_encrypted_instore(profile: &Profile) -> Self {
-        let mut m = HashMap::new();
-        profile.secrets.iter().for_each(|(_, sec)| {
-            m.insert(
-                sec.clone(),
-                StoredSecretPath(PathBuf::from(sec.file.clone())),
-            );
-        });
-        Self(m)
+impl<T> SecretPathMap<SecretPath<PathBuf, T>> {
+    /// read secret file
+    pub fn bake(self) -> Result<SecretPathMap<Vec<u8>>> {
+        self.inner()
+            .into_iter()
+            .map(|(k, v)| v.read_buffer().and_then(|b| Ok((k, b))))
+            .try_collect::<SecretPathMap<Vec<u8>>>()
     }
-    pub fn init_from_to_renced_instore_path(profile: &Profile) -> Self {
-        let mut m = HashMap::new();
-        profile.secrets.clone().into_values().for_each(|s| {
-            m.insert(s.clone(), s.to_renced_store_pathbuf(&profile.settings));
-        });
-        Self(m)
+
+    pub fn calculate_renc(self, host_pubkey: String) -> Result<SecretPathMap<blake3::Hash>> {
+        let mut hasher = blake3::Hasher::new();
+        self.bake().and_then(|h| {
+            h.inner()
+                .into_iter()
+                .map(|(k, v)| {
+                    hasher.update(v.as_slice());
+                    hasher.update(host_pubkey.as_bytes());
+                    let hash = hasher.finalize();
+                    Ok((k, hash))
+                })
+                .try_collect::<SecretPathMap<blake3::Hash>>()
+        })
     }
-    // v: flakeroot/secrets/renced/tester/hash-name.age
-    pub fn to_flake_repo_relative_renced_path(
-        &self,
-        profile: &Profile,
-        flake_root: PathBuf,
-    ) -> Self {
-        let renc_path = {
-            let mut p = flake_root;
-            p.push(profile.settings.storage_dir_relative.clone());
-            p
-        };
-        let mut m = HashMap::new();
-        profile.secrets.clone().into_values().for_each(|s| {
-            let mut renc_path = renc_path.clone();
-            let name = self
-                .clone()
-                .inner()
-                .get(&s)
-                .unwrap()
-                .0
-                .file_name()
-                .unwrap()
-                .to_string_lossy()
-                .to_string();
-            renc_path.push(name);
-            // renc_path.canonicalize().unwrap();
-            m.insert(s, StoredSecretPath(renc_path));
-        });
-        SecretPathMap(m)
-    }
-    pub fn inner(self) -> HashMap<profile::Secret, StoredSecretPath> {
-        self.0
-    }
-    // pub fn get_all_secret_name(self) -> impl Iterator<Item = String> {
-    //     self.inner().into_keys().map(|i| i.name.clone())
-    // }
 }
 
-impl StoredSecretPath {
-    pub fn init_from(settings: &Settings, secret: &profile::Secret) -> Self {
-        let mut hasher = Sha256::new();
-        let Settings {
-            host_pubkey,
-            storage_dir_store,
-            ..
-        } = settings;
-
-        let pubkey_hash = {
-            hasher.update(host_pubkey);
-            format!("{:x}", hasher.clone().finalize())
-        };
-        trace!("public key hash: {}", pubkey_hash);
-
-        let profile::Secret { file, name, .. } = secret;
-        // TODO: here the storage_dir_path jiziwa no use
-        let secret_file_path = {
-            hasher.update(file);
-            let secret_file_string_hash = format!("{:x}", hasher.clone().finalize());
-            let ident_hash = {
-                let mut pubkey_hash_string = pubkey_hash.clone();
-                pubkey_hash_string.push_str(&secret_file_string_hash);
-                let sum_hash_string = pubkey_hash_string;
-                hasher.update(sum_hash_string);
-                format!("{:x}", hasher.finalize()).split_off(32)
-            };
-
-            trace!("identity hash: {}", ident_hash);
-
-            let mut storage_dir_path = PathBuf::from(storage_dir_store);
-            trace!("storage dir path prefix: {:?}", storage_dir_path);
-            storage_dir_path.push(format!("{}-{}.age", ident_hash, name));
-            trace!("added renced credential: {:?}", storage_dir_path);
-            storage_dir_path
-        };
-        Self(secret_file_path)
-    }
-
-    pub fn read_hostpubkey_encrypted_cipher_content(self) -> eyre::Result<Vec<u8>> {
-        use eyre::eyre;
-        trace!("reading cipher file: {:?}", self.0);
-        info!("reading {}", self.0.clone().display());
-        fs::read(self.0).map_err(|e| eyre!("read cipher file error: {}", e))
-    }
-
-    pub fn inner(self) -> PathBuf {
-        self.0
+impl SecretPathMap<SecretPath<PathBuf, InStore>> {
+    pub fn from(secrets: SecretSet) -> Self {
+        let res = secrets
+            .into_values()
+            .into_iter()
+            .map(|s| {
+                let secret_path = SecretPath::<_, InStore>::new(PathBuf::from(s.file.clone()));
+                (s, secret_path)
+            })
+            .collect();
+        SecretPathMap::<SecretPath<PathBuf, InStore>>(res)
     }
 }

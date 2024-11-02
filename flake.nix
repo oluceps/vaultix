@@ -97,6 +97,7 @@
               buildInputs = with pkgs; [
                 just
                 nushell
+                rust-bin.beta.latest.complete
               ];
             };
 

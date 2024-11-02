@@ -30,14 +30,6 @@
           modules = [
             ./configuration.nix
             ./UEFI
-            (
-              { lib, ... }:
-              {
-                options.test = lib.mkOption {
-                  type = lib.types.path;
-                };
-              }
-            )
             self.nixosModules.default
             {
               nixpkgs = {

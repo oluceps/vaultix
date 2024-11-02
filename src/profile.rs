@@ -3,9 +3,11 @@ use std::collections::HashMap;
 
 use serde::Deserialize;
 
+pub type SecretSet = HashMap<String, Secret>;
+
 #[derive(Debug, Deserialize)]
 pub struct Profile {
-    pub secrets: HashMap<String, Secret>,
+    pub secrets: SecretSet,
     pub settings: Settings,
 }
 
