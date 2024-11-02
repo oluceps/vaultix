@@ -96,6 +96,7 @@ impl<T> SecMap<SecPath<PathBuf, T>> {
         info!("bake_ctx");
         self.inner()
             .into_iter()
+            // TODO: reduce read
             .map(|(k, v)| v.read_buffer().and_then(|b| Ok((k, b))))
             .try_collect::<SecMap<Vec<u8>>>()
     }
@@ -139,7 +140,7 @@ impl SecMap<SecPath<PathBuf, InCfg>> {
             .into_values()
             .into_iter()
             .map(|s| {
-                let mut f =
+                let mut f = // TODO: reduce read
                     File::open(&s.file).wrap_err_with(|| eyre!("open secret file error"))?;
                 let mut buffer = Vec::new();
                 f.read_to_end(&mut buffer)
