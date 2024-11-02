@@ -1,3 +1,4 @@
+- [ ] reduce reads (two)
 - [ ] remote machine, compare hash, needs host priv key
 - [ ] [edit] extra encrypt key
 - [ ] deploy to other directory

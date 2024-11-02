@@ -11,7 +11,7 @@ use std::{
 };
 
 use crate::{
-    cmd::stored_sec_path::{HashWithCtx, InCfg, SecMap, SecPath},
+    cmd::stored_sec_path::{HashWithCtx, InCfg, InStore, SecMap, SecPath},
     profile::{MasterIdentity, Profile},
 };
 use crate::{interop::add_to_store, profile};
@@ -68,7 +68,10 @@ impl Profile {
         // from secrets metadata, from real config store
         let data = SecMap::<SecPath<_, InCfg>>::from(self.secrets.clone(), renc_path.clone());
 
-        let data_renc_path_map = data.clone().calc_renc(self.settings.host_pubkey.clone())?;
+        let instore_map = SecMap::<SecPath<_, InStore>>::from(self.secrets.clone());
+        let data_instore_map = instore_map
+            .clone()
+            .calc_renc(self.settings.host_pubkey.clone())?;
 
         let parsed_ident = key_pair_list
             .find(|k| k.is_ok())
@@ -89,7 +92,7 @@ impl Profile {
             Ok(decrypted)
         };
 
-        let sec_need_renc = data_renc_path_map
+        let sec_need_renc = data_instore_map
             .inner()
             .into_iter()
             .filter(|(k, v)| {
@@ -98,7 +101,8 @@ impl Profile {
                 let renc_path = {
                     let mut path = renc_path.clone();
                     path.push(hash.to_string());
-                    path.canonicalize().expect("no err")
+                    info!("check {}", path.display());
+                    path
                 };
 
                 debug!("comparing {}", renc_path.display());
@@ -114,9 +118,15 @@ impl Profile {
             .collect::<HashMap<profile::Secret, HashWithCtx>>()
             .into_keys()
             .collect::<Vec<profile::Secret>>();
+        // info!("{:?}", sec_need_renc);
 
         // TODO: host pub key type safe
-        data.makeup(sec_need_renc, self.settings.host_pubkey.clone(), decrypt)
+        data.makeup(
+            instore_map,
+            sec_need_renc,
+            self.settings.host_pubkey.clone(),
+            decrypt,
+        )
 
         // let o = add_to_store(renc_path)?;
         // if !o.status.success() {

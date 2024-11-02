@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    fmt,
     fs::{self, File},
     io::Read,
     iter,
@@ -9,6 +10,7 @@ use std::{
 use age::Identity;
 use eyre::{Context, ContextCompat};
 use nom::Err;
+use spdlog::info;
 
 use crate::profile::{self, Profile, SecretSet, Settings};
 use eyre::{eyre, Result};
@@ -16,8 +18,14 @@ use std::marker::PhantomData;
 
 #[derive(Debug, Clone)]
 pub struct SecPath<P: AsRef<Path>, T> {
-    path: P,
+    pub path: P,
     _marker: PhantomData<T>,
+}
+
+impl<P: AsRef<Path>, T> fmt::Display for SecPath<P, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.path.as_ref().display())
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -47,6 +55,7 @@ where
     P: AsRef<Path>,
 {
     fn open_file(&self) -> Result<File> {
+        info!("opening {}", &self);
         File::open(&self.path).wrap_err_with(|| eyre!("open secret file error"))
     }
 
@@ -100,6 +109,7 @@ impl<T> SecMap<T> {
 impl<T> SecMap<SecPath<PathBuf, T>> {
     /// read secret file
     pub fn bake_ctx(self) -> Result<SecMap<Vec<u8>>> {
+        info!("bake_ctx");
         self.inner()
             .into_iter()
             .map(|(k, v)| v.read_buffer().and_then(|b| Ok((k, b))))
@@ -145,24 +155,29 @@ impl SecMap<SecPath<PathBuf, InCfg>> {
             .into_values()
             .into_iter()
             .map(|s| {
-                s.file
-                    .clone()
-                    .split_once('-') // '-'
-                    .and_then(|(_, n)| Some(n)) // ,_,
-                    .wrap_err_with(|| eyre!("something wrong with secret file name in store"))
-                    .and_then(|file_n| {
-                        let mut path = storage_abs_cfg.clone();
-                        path.push(file_n);
-                        let secret_path = SecPath::<_, InCfg>::new(path);
-                        Ok((s, secret_path))
-                    })
+                let mut f =
+                    File::open(&s.file).wrap_err_with(|| eyre!("open secret file error"))?;
+                let mut buffer = Vec::new();
+                f.read_to_end(&mut buffer)
+                    .wrap_err_with(|| eyre!("read secret file error"))?;
+                let hash = blake3::hash(&buffer).to_string();
+                let mut path = storage_abs_cfg.clone();
+                path.push(hash);
+                let secret_path = SecPath::<_, InCfg>::new(path);
+                Ok::<(profile::Secret, SecPath<PathBuf, InCfg>), eyre::ErrReport>((s, secret_path))
             })
             .try_collect()
             .expect("ok");
         SecMap::<SecPath<PathBuf, InCfg>>(res)
     }
 
-    pub fn makeup<F>(self, target: Vec<profile::Secret>, host_pub: String, dec: F) -> Result<()>
+    pub fn makeup<F>(
+        self,
+        in_store_data: SecMap<SecPath<PathBuf, InStore>>,
+        target: Vec<profile::Secret>,
+        host_pub: String,
+        dec: F,
+    ) -> Result<()>
     where
         F: Fn(&Vec<u8>) -> Result<Vec<u8>>,
     {
@@ -172,38 +187,42 @@ impl SecMap<SecPath<PathBuf, InCfg>> {
             .filter(|(s, _)| target.contains(s))
             .collect();
 
-        let map_path_with_ctx: SecMap<PathWithCtx> = SecMap::<SecPath<_, InCfg>>(spm).into();
-        map_path_with_ctx
-            .inner()
-            .into_iter()
-            .try_for_each(|(_, v)| {
-                let target_path = v.get_path();
-                let enc_ctx = v.get_ctx();
-                // decrypt
-                let dec_ctx = dec(enc_ctx)?;
+        // let map_path_with_ctx: SecMap<PathWithCtx> = SecMap::<SecPath<_, InCfg>>(spm).into();
+        // info!("{:?}", map_path_with_ctx);
+        in_store_data.inner().into_iter().try_for_each(|(s, v)| {
+            let enc_ctx = v.read_buffer()?;
+            let target_path = spm
+                .get(&s)
+                .cloned()
+                .wrap_err_with(|| eyre!("getpatherror"))?
+                .path;
+            // decrypt
+            let dec_ctx = dec(&enc_ctx)?;
 
-                use std::io::Write;
-                use std::str::FromStr;
-                let recip_host_pubkey = age::ssh::Recipient::from_str(host_pub.as_str())
-                    .map_err(|_| eyre!("add recipient from host pubkey fail"))?;
+            use std::io::Write;
+            use std::str::FromStr;
+            let recip_host_pubkey = age::ssh::Recipient::from_str(host_pub.as_str())
+                .map_err(|_| eyre!("add recipient from host pubkey fail"))?;
 
-                let encryptor =
-                    age::Encryptor::with_recipients(iter::once(&recip_host_pubkey as _))
-                        .map_err(|_| eyre!("create encryptor err"))?;
+            let encryptor = age::Encryptor::with_recipients(iter::once(&recip_host_pubkey as _))
+                .map_err(|_| eyre!("create encryptor err"))?;
 
-                let mut renc_ctx = vec![];
+            let mut renc_ctx = vec![];
 
-                let mut writer = encryptor.wrap_output(&mut renc_ctx)?;
+            let mut writer = encryptor.wrap_output(&mut renc_ctx)?;
 
-                writer.write_all(&dec_ctx[..])?;
-                writer.finish()?;
+            writer.write_all(&dec_ctx[..])?;
+            writer.finish()?;
 
-                let mut target_file = fs::OpenOptions::new().write(true).open(target_path)?;
+            let mut target_file = fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .open(target_path)?;
 
-                target_file
-                    .write_all(&renc_ctx)
-                    .wrap_err_with(|| eyre!("write renc file error"))
-            })
+            target_file
+                .write_all(&renc_ctx)
+                .wrap_err_with(|| eyre!("write renc file error"))
+        })
     }
 }
 

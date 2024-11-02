@@ -6,7 +6,7 @@ use {argh::FromArgs, std::fmt::Debug};
 
 mod stored_sec_path;
 
-// mod check;
+mod check;
 // mod deploy;
 // mod edit;
 mod renc;
@@ -96,8 +96,7 @@ impl Args {
             SubCmd::Edit(_) => todo!(),
             SubCmd::Check(_) => {
                 info!("start checking");
-                todo!();
-                // profile.check()?;
+                profile.check()?;
                 info!("check complete");
                 Ok(())
             }
