@@ -7,9 +7,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use age::Identity;
 use eyre::{Context, ContextCompat};
-use nom::Err;
 use spdlog::info;
 
 use crate::profile::{self, Profile, SecretSet, Settings};
@@ -81,21 +79,7 @@ macro_rules! impl_from_iterator_for_secmap {
     };
 }
 
-impl_from_iterator_for_secmap!(Vec<u8>, HashWithCtx, PathWithCtx);
-
-pub struct HashWithCtx(blake3::Hash, Vec<u8>);
-
-impl HashWithCtx {
-    pub fn new(b: blake3::Hash, v: Vec<u8>) -> Self {
-        HashWithCtx(b, v)
-    }
-    pub fn get_hash(&self) -> &blake3::Hash {
-        &self.0
-    }
-    pub fn get_ctx(&self) -> &Vec<u8> {
-        &self.1
-    }
-}
+impl_from_iterator_for_secmap!(Vec<u8>, PathWithCtx, blake3::Hash);
 
 #[derive(Debug, Clone)]
 pub struct SecMap<P>(HashMap<profile::Secret, P>);
@@ -119,7 +103,7 @@ impl<T> SecMap<SecPath<PathBuf, T>> {
     /// hash of encrypted file content
     /// used in: renc, calc and compare
     ///          deploy, calc and find in store
-    pub fn calc_renc(self, _host_pubkey: String) -> Result<SecMap<HashWithCtx>> {
+    pub fn calc_renc(self, _host_pubkey: String) -> Result<SecMap<blake3::Hash>> {
         self.bake_ctx().and_then(|h| {
             h.inner()
                 .into_iter()
@@ -128,9 +112,9 @@ impl<T> SecMap<SecPath<PathBuf, T>> {
                     hasher.update(v.as_slice());
                     // hasher.update(host_pubkey.as_bytes());
                     let hash = hasher.finalize();
-                    Ok((k, HashWithCtx::new(hash, v)))
+                    Ok((k, hash))
                 })
-                .try_collect::<SecMap<HashWithCtx>>()
+                .try_collect::<SecMap<blake3::Hash>>()
         })
     }
 }
@@ -187,8 +171,6 @@ impl SecMap<SecPath<PathBuf, InCfg>> {
             .filter(|(s, _)| target.contains(s))
             .collect();
 
-        // let map_path_with_ctx: SecMap<PathWithCtx> = SecMap::<SecPath<_, InCfg>>(spm).into();
-        // info!("{:?}", map_path_with_ctx);
         in_store_data.inner().into_iter().try_for_each(|(s, v)| {
             let enc_ctx = v.read_buffer()?;
             let target_path = spm
@@ -238,20 +220,20 @@ impl PathWithCtx {
     }
 }
 
-impl From<SecMap<SecPath<PathBuf, InCfg>>> for SecMap<PathWithCtx> {
-    fn from(value: SecMap<SecPath<PathBuf, InCfg>>) -> Self {
-        value
-            .inner()
-            .into_iter()
-            .filter_map(|(s, p)| {
-                let mut f = p.open_file().ok()?;
-                let mut buffer = Vec::new();
-                f.read_to_end(&mut buffer)
-                    .wrap_err_with(|| eyre!("read secret file error"))
-                    .ok()?;
-                Some((s, PathWithCtx(p, buffer)))
-            })
-            .collect()
-    }
-}
+// impl From<SecMap<SecPath<PathBuf, InCfg>>> for SecMap<PathWithCtx> {
+//     fn from(value: SecMap<SecPath<PathBuf, InCfg>>) -> Self {
+//         value
+//             .inner()
+//             .into_iter()
+//             .filter_map(|(s, p)| {
+//                 let mut f = p.open_file().ok()?;
+//                 let mut buffer = Vec::new();
+//                 f.read_to_end(&mut buffer)
+//                     .wrap_err_with(|| eyre!("read secret file error"))
+//                     .ok()?;
+//                 Some((s, PathWithCtx(p, buffer)))
+//             })
+//             .collect()
+//     }
+// }
 // impl From<SecMap<PathWithCtx>> for

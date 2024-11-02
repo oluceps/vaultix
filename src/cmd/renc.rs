@@ -11,7 +11,7 @@ use std::{
 };
 
 use crate::{
-    cmd::stored_sec_path::{HashWithCtx, InCfg, InStore, SecMap, SecPath},
+    cmd::stored_sec_path::{InCfg, InStore, SecMap, SecPath},
     profile::{MasterIdentity, Profile},
 };
 use crate::{interop::add_to_store, profile};
@@ -97,11 +97,11 @@ impl Profile {
             .into_iter()
             .filter(|(k, v)| {
                 // TODO: extraReceip
-                let hash = v.get_hash();
+                let hash = v;
                 let renc_path = {
                     let mut path = renc_path.clone();
                     path.push(hash.to_string());
-                    info!("check {}", path.display());
+                    trace!("checking {}", path.display());
                     path
                 };
 
@@ -115,25 +115,25 @@ impl Profile {
 
                 !exs
             })
-            .collect::<HashMap<profile::Secret, HashWithCtx>>()
+            .collect::<HashMap<profile::Secret, blake3::Hash>>()
             .into_keys()
             .collect::<Vec<profile::Secret>>();
-        // info!("{:?}", sec_need_renc);
 
         // TODO: host pub key type safe
-        data.makeup(
+        if let Ok(_) = data.makeup(
             instore_map,
             sec_need_renc,
             self.settings.host_pubkey.clone(),
             decrypt,
-        )
+        ) {
+            let o = add_to_store(renc_path)?;
+            if !o.status.success() {
+                error!("Command executed with failing error code");
+            }
+            // Another side, calculate with nix `builtins.path` and pass to when deploy as `storage`
+            info!("path added to store: {}", String::from_utf8(o.stdout)?);
+        }
 
-        // let o = add_to_store(renc_path)?;
-        // if !o.status.success() {
-        //     error!("Command executed with failing error code");
-        // }
-        // // Another side, calculate with nix `builtins.path` and pass to when deploy as `storage`
-        // info!("path added to store: {}", String::from_utf8(o.stdout)?);
-        // Ok(())
+        Ok(())
     }
 }
