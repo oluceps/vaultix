@@ -1,4 +1,4 @@
-#![feature(iterator_try_collect)]
+#![feature(iterator_try_collect, inherent_associated_types)]
 use cmd::Args;
 use eyre::Result;
 

@@ -60,8 +60,11 @@ impl FromIterator<(profile::Secret, Vec<u8>)> for SecretPathMap<Vec<u8>> {
         SecretPathMap(map)
     }
 }
-impl FromIterator<(profile::Secret, blake3::Hash)> for SecretPathMap<blake3::Hash> {
-    fn from_iter<I: IntoIterator<Item = (profile::Secret, blake3::Hash)>>(iter: I) -> Self {
+
+type HashWithCtx = (blake3::Hash, Vec<u8>);
+
+impl FromIterator<(profile::Secret, HashWithCtx)> for SecretPathMap<HashWithCtx> {
+    fn from_iter<I: IntoIterator<Item = (profile::Secret, HashWithCtx)>>(iter: I) -> Self {
         let map = HashMap::from_iter(iter);
         SecretPathMap(map)
     }
@@ -85,18 +88,21 @@ impl<T> SecretPathMap<SecretPath<PathBuf, T>> {
             .try_collect::<SecretPathMap<Vec<u8>>>()
     }
 
-    pub fn calculate_renc(self, host_pubkey: String) -> Result<SecretPathMap<blake3::Hash>> {
-        let mut hasher = blake3::Hasher::new();
+    /// hash of encrypted file content
+    /// used in: renc, calc and compare
+    ///          deploy, calc and find in store
+    pub fn calc_renc(self, _host_pubkey: String) -> Result<SecretPathMap<HashWithCtx>> {
         self.bake().and_then(|h| {
             h.inner()
                 .into_iter()
                 .map(|(k, v)| {
+                    let mut hasher = blake3::Hasher::new();
                     hasher.update(v.as_slice());
-                    hasher.update(host_pubkey.as_bytes());
+                    // hasher.update(host_pubkey.as_bytes());
                     let hash = hasher.finalize();
-                    Ok((k, hash))
+                    Ok((k, (hash, v)))
                 })
-                .try_collect::<SecretPathMap<blake3::Hash>>()
+                .try_collect::<SecretPathMap<HashWithCtx>>()
         })
     }
 }
@@ -112,5 +118,19 @@ impl SecretPathMap<SecretPath<PathBuf, InStore>> {
             })
             .collect();
         SecretPathMap::<SecretPath<PathBuf, InStore>>(res)
+    }
+}
+
+impl SecretPathMap<SecretPath<PathBuf, InCfg>> {
+    pub fn from(secrets: SecretSet) -> Self {
+        let res = secrets
+            .into_values()
+            .into_iter()
+            .map(|s| {
+                let secret_path = SecretPath::<_, InCfg>::new(PathBuf::from(s.file.clone()));
+                (s, secret_path)
+            })
+            .collect();
+        SecretPathMap::<SecretPath<PathBuf, InCfg>>(res)
     }
 }
