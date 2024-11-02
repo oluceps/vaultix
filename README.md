@@ -7,6 +7,12 @@ Highly inspired by agenix-rekey.
 > [!CAUTION]
 > This project is in early dev stage, NOT ready for production.
 
+## Known Issue
+
+secret edited but not renc yet, vaultix calculate the path from `file` and get from store path,
+
+at this moment the path `storageDirStore` exist on store but the renced secret not. app will crash.
+
 ## Target
 
 + Less Bash

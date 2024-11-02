@@ -274,9 +274,9 @@ in
         wantedBy = [ "sysinit.target" ];
         after = [ "systemd-sysusers.service" ];
         unitConfig.DefaultDependencies = "no";
-
         serviceConfig = {
           Type = "oneshot";
+          Environment = [ ("storage:" + cfg.settings.storageDirStore) ];
           ExecStart = "${lib.getExe cfg.package} ${profile} deploy";
           RemainAfterExit = true;
         };

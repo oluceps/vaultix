@@ -126,8 +126,10 @@ impl StoredSecretPath {
     }
 
     pub fn read_hostpubkey_encrypted_cipher_content(self) -> eyre::Result<Vec<u8>> {
+        use eyre::eyre;
         trace!("reading cipher file: {:?}", self.0);
-        fs::read(self.0).wrap_err(format!("read cipher file error"))
+        info!("reading {}", self.0.clone().display());
+        fs::read(self.0).map_err(|e| eyre!("read cipher file error: {}", e))
     }
 
     pub fn inner(self) -> PathBuf {
