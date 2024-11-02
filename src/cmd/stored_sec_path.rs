@@ -2,11 +2,13 @@ use std::{
     collections::HashMap,
     fs::{self, File},
     io::Read,
+    iter,
     path::{Path, PathBuf},
 };
 
 use age::Identity;
 use eyre::{Context, ContextCompat};
+use nom::Err;
 
 use crate::profile::{self, Profile, SecretSet, Settings};
 use eyre::{eyre, Result};
@@ -145,8 +147,8 @@ impl SecMap<SecPath<PathBuf, InCfg>> {
             .map(|s| {
                 s.file
                     .clone()
-                    .split_once('-')
-                    .and_then(|(_, n)| Some(n))
+                    .split_once('-') // '-'
+                    .and_then(|(_, n)| Some(n)) // ,_,
                     .wrap_err_with(|| eyre!("something wrong with secret file name in store"))
                     .and_then(|file_n| {
                         let mut path = storage_abs_cfg.clone();
@@ -160,20 +162,62 @@ impl SecMap<SecPath<PathBuf, InCfg>> {
         SecMap::<SecPath<PathBuf, InCfg>>(res)
     }
 
-    pub fn makeup<F>(self, enc: F) -> Result<()>
+    pub fn makeup<F>(self, target: Vec<profile::Secret>, host_pub: String, dec: F) -> Result<()>
     where
-        F: Fn(&Vec<u8>, &dyn Identity) -> Result<Vec<u8>>,
+        F: Fn(&Vec<u8>) -> Result<Vec<u8>>,
     {
-        Ok(())
-    }
+        let spm: HashMap<profile::Secret, SecPath<PathBuf, InCfg>> = self
+            .inner()
+            .into_iter()
+            .filter(|(s, _)| target.contains(s))
+            .collect();
 
-    pub fn write(self) -> Result<()> {
-        Ok(())
+        let map_path_with_ctx: SecMap<PathWithCtx> = SecMap::<SecPath<_, InCfg>>(spm).into();
+        map_path_with_ctx
+            .inner()
+            .into_iter()
+            .try_for_each(|(_, v)| {
+                let target_path = v.get_path();
+                let enc_ctx = v.get_ctx();
+                // decrypt
+                let dec_ctx = dec(enc_ctx)?;
+
+                use std::io::Write;
+                use std::str::FromStr;
+                let recip_host_pubkey = age::ssh::Recipient::from_str(host_pub.as_str())
+                    .map_err(|_| eyre!("add recipient from host pubkey fail"))?;
+
+                let encryptor =
+                    age::Encryptor::with_recipients(iter::once(&recip_host_pubkey as _))
+                        .map_err(|_| eyre!("create encryptor err"))?;
+
+                let mut renc_ctx = vec![];
+
+                let mut writer = encryptor.wrap_output(&mut renc_ctx)?;
+
+                writer.write_all(&dec_ctx[..])?;
+                writer.finish()?;
+
+                let mut target_file = fs::OpenOptions::new().write(true).open(target_path)?;
+
+                target_file
+                    .write_all(&renc_ctx)
+                    .wrap_err_with(|| eyre!("write renc file error"))
+            })
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct PathWithCtx(SecPath<PathBuf, InCfg>, Vec<u8>);
+
+impl PathWithCtx {
+    pub fn get_path(&self) -> &PathBuf {
+        &self.0.path
+    }
+    pub fn get_ctx(&self) -> &Vec<u8> {
+        &self.1
+    }
+}
 
 impl From<SecMap<SecPath<PathBuf, InCfg>>> for SecMap<PathWithCtx> {
     fn from(value: SecMap<SecPath<PathBuf, InCfg>>) -> Self {
@@ -191,3 +235,4 @@ impl From<SecMap<SecPath<PathBuf, InCfg>>> for SecMap<PathWithCtx> {
             .collect()
     }
 }
+// impl From<SecMap<PathWithCtx>> for

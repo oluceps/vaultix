@@ -70,11 +70,17 @@ impl Profile {
 
         let data_renc_path_map = data.clone().calc_renc(self.settings.host_pubkey.clone())?;
 
-        let decrypt = |buffer: &Vec<u8>, key: &dyn Identity| -> Result<Vec<u8>> {
+        let parsed_ident = key_pair_list
+            .find(|k| k.is_ok())
+            .wrap_err_with(|| eyre!("available keypair not found"))??;
+
+        let key = parsed_ident.get_identity();
+
+        let decrypt = |buffer: &Vec<u8>| -> Result<Vec<u8>> {
             let decryptor = age::Decryptor::new(&buffer[..])?;
 
             let mut decrypted = vec![];
-            let mut reader = decryptor.decrypt(iter::once(key as &dyn age::Identity))?;
+            let mut reader = decryptor.decrypt(iter::once(&**key))?;
             let res = reader.read_to_end(&mut decrypted);
             if let Ok(b) = res {
                 debug!("decrypted secret {} bytes", b);
@@ -83,16 +89,11 @@ impl Profile {
             Ok(decrypted)
         };
 
-        let parsed_ident = key_pair_list
-            .find(|k| k.is_ok())
-            .wrap_err_with(|| eyre!("available keypair not found"))??;
-
-        let key = parsed_ident.get_identity();
-
         let sec_need_renc = data_renc_path_map
             .inner()
             .into_iter()
             .filter(|(k, v)| {
+                // TODO: extraReceip
                 let hash = v.get_hash();
                 let renc_path = {
                     let mut path = renc_path.clone();
@@ -114,9 +115,8 @@ impl Profile {
             .into_keys()
             .collect::<Vec<profile::Secret>>();
 
-        // data.bake().and_then(|b| {
-        //     b.inner().into_iter().filter(|(s,_)| sec_need_renc.contains(s)).for_each(|(k,v)|)
-        // })
+        // TODO: host pub key type safe
+        data.makeup(sec_need_renc, self.settings.host_pubkey.clone(), decrypt)
 
         // let o = add_to_store(renc_path)?;
         // if !o.status.success() {
@@ -124,6 +124,6 @@ impl Profile {
         // }
         // // Another side, calculate with nix `builtins.path` and pass to when deploy as `storage`
         // info!("path added to store: {}", String::from_utf8(o.stdout)?);
-        Ok(())
+        // Ok(())
     }
 }

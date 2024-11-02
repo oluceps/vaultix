@@ -9,7 +9,6 @@ use std::{
 };
 
 use crate::{
-    cmd::stored_sec_path::SecretPathMap,
     helper,
     profile::{self, HostKey, Profile},
 };
