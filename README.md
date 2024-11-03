@@ -10,9 +10,7 @@ Highly inspired by agenix-rekey. Based on rust age crate.
 + AGE Key Support
 + PIV Card (Yubikey) Support
 
-## Usage
-
-Prerequisite:
+## Prerequisite:
 
 + flake.
 
