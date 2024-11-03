@@ -94,7 +94,12 @@
                 pkgs.vaultix
               ];
 
-              # RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
+              # see https://discourse.nixos.org/t/rust-src-not-found-and-other-misadventures-of-developing-rust-on-nixos/11570/12
+              RUST_SRC_PATH = "${
+                pkgs.rust-bin.nightly.latest.default.override {
+                  extensions = [ "rust-src" ];
+                }
+              }/lib/rustlib/src/rust/library";
               buildInputs = with pkgs; [
                 just
                 nushell
