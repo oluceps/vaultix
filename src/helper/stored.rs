@@ -83,7 +83,7 @@ macro_rules! impl_from_iterator_for_secmap {
     };
 }
 
-impl_from_iterator_for_secmap!(Vec<u8>, blake3::Hash, SumPath);
+impl_from_iterator_for_secmap!(Vec<u8>, blake3::Hash, UniPath);
 
 #[derive(Debug, Clone)]
 pub struct SecMap<P>(HashMap<profile::Secret, P>);
@@ -153,56 +153,77 @@ impl SecMap<SecPath<PathBuf, InStore>> {
     }
 }
 
-// TODO: SUM!
 #[derive(Debug, Clone)]
-pub struct SumPath {
+pub struct UniPath {
     store: SecPath<PathBuf, InStore>,
     real: SecPath<PathBuf, InCfg>,
 }
-impl SumPath {
+
+impl UniPath {
     pub fn new(store: SecPath<PathBuf, InStore>, real: SecPath<PathBuf, InCfg>) -> Self {
-        SumPath { store, real }
+        UniPath { store, real }
     }
 }
 
-impl SecMap<SumPath> {
-    pub fn from(secrets: SecretSet, host_dir: PathBuf, host_recip: String) -> Self {
+pub struct Renc {
+    pub map: SecMap<UniPath>,
+    host_dir: PathBuf,
+    host_recip: String,
+}
+impl Renc {
+    pub fn new(secrets: SecretSet, host_dir: PathBuf, host_recip: String) -> Self {
         let p2 = SecMap::<SecPath<PathBuf, InStore>>::from(secrets);
-        let p1 = SecMap::<SecPath<PathBuf, InCfg>>::from(p2.clone(), host_dir, host_recip).inner();
+        let p1 = SecMap::<SecPath<PathBuf, InCfg>>::from(
+            p2.clone(),
+            host_dir.clone(),
+            host_recip.clone(),
+        )
+        .inner();
         let p2 = p2.inner();
 
         let mut merged_map = HashMap::new();
 
         p1.into_iter().for_each(|(key, vout)| {
             if let Some(vin) = p2.get(&key) {
-                merged_map.insert(key, SumPath::new(vin.clone(), vout));
+                merged_map.insert(key, UniPath::new(vin.clone(), vout));
             }
         });
-        SecMap(merged_map)
+        Renc {
+            map: SecMap(merged_map),
+            host_dir,
+            host_recip,
+        }
     }
 
-    pub fn filter_exist(self, storage_abs_cfg: PathBuf, host_recip: String) -> Self {
+    pub fn filter_exist(self) -> Self {
         let ret = self
+            .map
             .inner()
             .into_iter()
             .filter_map(|(k, v)| {
-                let enc_hash = v.store.calc_hash(host_recip.clone()).ok()?;
-                let mut renc_path = storage_abs_cfg.clone();
+                let enc_hash = v.store.calc_hash(self.host_recip.clone()).ok()?;
+                let mut renc_path = self.host_dir.clone();
                 renc_path.push(enc_hash.to_string());
                 if renc_path.exists() {
                     return None;
                 }
                 Some((k, v))
             })
-            .collect();
-        ret
+            .collect::<HashMap<profile::Secret, UniPath>>();
+        Renc {
+            map: SecMap(ret),
+            host_dir: self.host_dir,
+            host_recip: self.host_recip,
+        }
     }
+}
 
+impl SecMap<UniPath> {
     pub fn makeup(self, recips: Vec<Rc<dyn Recipient>>, ident: &dyn Identity) -> Result<()> {
         self.inner()
             .into_iter()
             .map(|(_sec, sec_path)| {
-                let SumPath { store, real } = sec_path;
+                let UniPath { store, real } = sec_path;
                 use std::io::Write;
 
                 trace!("re-encrypted output path {}", real.path.display());

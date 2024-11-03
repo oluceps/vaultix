@@ -2,7 +2,7 @@ use eyre::{eyre, ContextCompat, Result};
 use spdlog::{error, info};
 use std::{fs, path::PathBuf};
 
-use crate::helper::stored::{SecMap, SumPath};
+use crate::helper::stored::Renc;
 use crate::interop::add_to_store;
 use crate::profile::{MasterIdentity, Profile};
 
@@ -57,13 +57,12 @@ impl Profile {
         };
 
         // from secrets metadata, from real config store
-        let data = SecMap::<SumPath>::from(
-            // TODO: beauty
+        let data = Renc::new(
             self.secrets.clone(),
             renc_path.clone(),
             self.settings.host_pubkey.clone(),
         )
-        .filter_exist(renc_path.clone(), self.settings.host_pubkey.clone());
+        .filter_exist();
 
         let parsed_ident = key_pair_list
             .find(|k| k.is_ok())
@@ -72,7 +71,7 @@ impl Profile {
         let key = parsed_ident.get_identity();
 
         let recip = self.get_host_recip()?;
-        if let Err(e) = data.makeup(vec![recip], &**key) {
+        if let Err(e) = data.map.makeup(vec![recip], &**key) {
             return Err(eyre!("makeup error: {}", e));
         } else {
             let o = add_to_store(renc_path)?;
