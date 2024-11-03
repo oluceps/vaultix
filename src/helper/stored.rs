@@ -125,7 +125,6 @@ impl SecMap<SecPath<PathBuf, InStore>> {
             .collect();
         SecMap::<SecPath<PathBuf, InStore>>(res)
     }
-    /// pass storageDirStore in
     pub fn renced(self, per_host_dir: PathBuf, host_pubkey: String) -> Self {
         let res = self
             .inner()
@@ -134,15 +133,9 @@ impl SecMap<SecPath<PathBuf, InStore>> {
                 let mut dir = per_host_dir.clone();
                 let sec_path = v;
                 let sec_hash = sec_path
-                    .read_buffer()
-                    .and_then(|b| {
-                        let mut hasher = blake3::Hasher::new();
-                        hasher.update(b.as_slice());
-                        hasher.update(host_pubkey.as_bytes());
-                        let hash_final = hasher.finalize();
-                        Ok(hash_final.to_string())
-                    })
-                    .expect("hash");
+                    .calc_hash(host_pubkey.clone())
+                    .expect("meow")
+                    .to_string();
                 dir.push(sec_hash);
 
                 let renced_in_per_host_dir = dir;

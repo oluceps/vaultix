@@ -82,7 +82,6 @@ impl Profile {
         let mut max = 0;
         let res = match self.read_decrypted_mount_point() {
             Err(e) if e.kind() == ErrorKind::NotFound => {
-                // TODO: noswap mount tmpfs
                 let support_ramfs =
                     SupportedFilesystems::new().and_then(|fss| Ok(fss.is_supported("ramfs")));
                 if !support_ramfs? {
