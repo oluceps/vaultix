@@ -1,8 +1,8 @@
+# Vaultix
+
 ![built with nix](https://img.shields.io/static/v1?logo=nixos&logoColor=white&label=&message=Built%20with%20Nix&color=41439a)
 ![state](https://img.shields.io/badge/works-on%20my%20machines-FEDFE1)
 ![CI state](https://github.com/oluceps/vaultix/actions/workflows/lint.yaml/badge.svg)
-
-# Vaultix
 
 Secret management for NixOS.
 
