@@ -11,8 +11,11 @@ Highly inspired by agenix-rekey. Based on rust age crate.
 > [!CAUTION]
 > This project is in VERY early dev stage, NOT ready for production.
 
-+ AGE Key Support
++ AGE Support Only
 + PIV Card (Yubikey) Support
++ Age Plugin Compatible
++ `~2M` Sized Binary
++ No Bash
 
 ## Prerequisite:
 
@@ -20,7 +23,6 @@ Highly inspired by agenix-rekey. Based on rust age crate.
 + `flake-parts` structured config
 + `self` as specialArgs, to `nixosSystem`
 + `systemd.sysusers` or `services.userborn` option enabled
-
 
 ## Setup
 
