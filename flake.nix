@@ -35,7 +35,6 @@
         imports = with inputs; [
           pre-commit-hooks.flakeModule
           flakeModules.default
-          ./test
         ];
         systems = [
           "x86_64-linux"

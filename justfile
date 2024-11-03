@@ -7,9 +7,6 @@ default:
 
 build-package:
     nix build .
-test-metadata:
-    nix build '.#nixosConfigurations.tester.config.test'
-    open result
 eval-json:
     nix eval --json '.#nixosConfigurations.tester.config.test' | jq
 
