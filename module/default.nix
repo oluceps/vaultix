@@ -265,7 +265,7 @@ in
 
   config =
     let
-      profile = (pkgs.formats.toml { }).generate "secretsMetadata" cfg;
+      profile = (pkgs.formats.toml { }).generate "secret-meta" cfg;
       checkRencSecsReport =
         pkgs.runCommandNoCCLocal "secret-check-report" { }
           "${lib.getExe cfg.package} ${profile} check > $out";

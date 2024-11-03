@@ -9,6 +9,7 @@ use std::{
 };
 
 use crate::{
+    cmd::stored_sec_path::{InStore, SecMap, SecPath},
     helper,
     profile::{self, HostKey, Profile},
 };
@@ -118,18 +119,10 @@ impl Profile {
     extract secrets to `/run/vaultix.d/$num` and link to `/run/vaultix`
     */
     pub fn deploy(self) -> Result<()> {
-        // secrets => vec<u8>
-        let sec_ciphertext_map: HashMap<profile::Secret, Vec<u8>> = {
-            let map = SecretPathMap::from_profile(&self).inner();
-            let mut ret = HashMap::new();
-            map.into_iter().for_each(|(s, p)| {
-                let _ = ret.insert(
-                    s,
-                    p.read_hostpubkey_encrypted_cipher_content().expect("error"),
-                );
-            });
-            ret
-        };
+        let sec_ciphertext_map: HashMap<profile::Secret, Vec<u8>> =
+            SecMap::<SecPath<_, InStore>>::from(self.secrets.clone())
+                .bake_ctx()?
+                .inner();
 
         trace!("{:?}", sec_ciphertext_map);
 

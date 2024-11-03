@@ -7,7 +7,7 @@ use {argh::FromArgs, std::fmt::Debug};
 mod stored_sec_path;
 
 mod check;
-// mod deploy;
+mod deploy;
 // mod edit;
 mod renc;
 
@@ -90,8 +90,8 @@ impl Args {
             }
             SubCmd::Deploy(DeploySubCmd { ref storage }) => {
                 info!("deploying secrets");
-                todo!()
-                // profile.deploy()
+                // todo!()
+                profile.deploy()
             }
             SubCmd::Edit(_) => todo!(),
             SubCmd::Check(_) => {

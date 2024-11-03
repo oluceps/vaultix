@@ -7,10 +7,11 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use age::{Identity, Recipient};
 use eyre::{Context, ContextCompat};
-use spdlog::info;
+use spdlog::{debug, info};
 
-use crate::profile::{self, Profile, SecretSet, Settings};
+use crate::profile::{self, SecretSet};
 use eyre::{eyre, Result};
 use std::marker::PhantomData;
 
@@ -79,7 +80,7 @@ macro_rules! impl_from_iterator_for_secmap {
     };
 }
 
-impl_from_iterator_for_secmap!(Vec<u8>, PathWithCtx, blake3::Hash);
+impl_from_iterator_for_secmap!(Vec<u8>, blake3::Hash);
 
 #[derive(Debug, Clone)]
 pub struct SecMap<P>(HashMap<profile::Secret, P>);
@@ -156,16 +157,13 @@ impl SecMap<SecPath<PathBuf, InCfg>> {
         SecMap::<SecPath<PathBuf, InCfg>>(res)
     }
 
-    pub fn makeup<F>(
+    pub fn makeup(
         self,
         in_store_data: SecMap<SecPath<PathBuf, InStore>>,
         target: Vec<profile::Secret>,
         host_pub: String,
-        dec: F,
-    ) -> Result<()>
-    where
-        F: Fn(&Vec<u8>) -> Result<Vec<u8>>,
-    {
+        ident: &dyn Identity,
+    ) -> Result<()> {
         let spm: HashMap<profile::Secret, SecPath<PathBuf, InCfg>> = self
             .inner()
             .into_iter()
@@ -179,23 +177,14 @@ impl SecMap<SecPath<PathBuf, InCfg>> {
                 .cloned()
                 .wrap_err_with(|| eyre!("getpatherror"))?
                 .path;
-            // decrypt
-            let dec_ctx = dec(&enc_ctx)?;
-
             use std::io::Write;
             use std::str::FromStr;
             let recip_host_pubkey = age::ssh::Recipient::from_str(host_pub.as_str())
                 .map_err(|_| eyre!("add recipient from host pubkey fail"))?;
 
-            let encryptor = age::Encryptor::with_recipients(iter::once(&recip_host_pubkey as _))
-                .map_err(|_| eyre!("create encryptor err"))?;
-
-            let mut renc_ctx = vec![];
-
-            let mut writer = encryptor.wrap_output(&mut renc_ctx)?;
-
-            writer.write_all(&dec_ctx[..])?;
-            writer.finish()?;
+            // rencrypt
+            let renc_ctx =
+                SecBuf::<AgeEnc>::new(enc_ctx).renc(ident, &recip_host_pubkey as &dyn Recipient)?;
 
             let mut target_file = fs::OpenOptions::new()
                 .write(true)
@@ -203,38 +192,75 @@ impl SecMap<SecPath<PathBuf, InCfg>> {
                 .open(target_path)?;
 
             target_file
-                .write_all(&renc_ctx)
+                .write_all(renc_ctx.buf_ref())
                 .wrap_err_with(|| eyre!("write renc file error"))
         })
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct PathWithCtx(SecPath<PathBuf, InCfg>, Vec<u8>);
+pub struct AgeEnc;
+#[derive(Debug, Clone)]
+pub struct HostEnc;
+#[derive(Debug, Clone)]
+pub struct Plain;
 
-impl PathWithCtx {
-    pub fn get_path(&self) -> &PathBuf {
-        &self.0.path
-    }
-    pub fn get_ctx(&self) -> &Vec<u8> {
-        &self.1
+pub struct SecBuf<T> {
+    buf: Vec<u8>,
+    _marker: PhantomData<T>,
+}
+
+impl<T> SecBuf<T> {
+    pub fn new(i: Vec<u8>) -> Self {
+        SecBuf {
+            buf: i,
+            _marker: PhantomData,
+        }
     }
 }
 
-// impl From<SecMap<SecPath<PathBuf, InCfg>>> for SecMap<PathWithCtx> {
-//     fn from(value: SecMap<SecPath<PathBuf, InCfg>>) -> Self {
-//         value
-//             .inner()
-//             .into_iter()
-//             .filter_map(|(s, p)| {
-//                 let mut f = p.open_file().ok()?;
-//                 let mut buffer = Vec::new();
-//                 f.read_to_end(&mut buffer)
-//                     .wrap_err_with(|| eyre!("read secret file error"))
-//                     .ok()?;
-//                 Some((s, PathWithCtx(p, buffer)))
-//             })
-//             .collect()
-//     }
-// }
-// impl From<SecMap<PathWithCtx>> for
+impl<T> SecBuf<T> {
+    pub fn buf_ref<'a>(&'a self) -> &'a Vec<u8> {
+        self.buf.as_ref()
+    }
+}
+
+impl SecBuf<AgeEnc> {
+    pub fn decrypt(&self, ident: &dyn Identity) -> Result<SecBuf<Plain>> {
+        let buffer = self.buf_ref();
+        let decryptor = age::Decryptor::new(&buffer[..])?;
+
+        let mut dec_ctx = vec![];
+        let mut reader = decryptor.decrypt(iter::once(ident))?;
+        let res = reader.read_to_end(&mut dec_ctx);
+        if let Ok(b) = res {
+            debug!("decrypted secret {} bytes", b);
+        }
+        Ok(SecBuf::new(dec_ctx))
+    }
+    pub fn renc(&self, ident: &dyn Identity, receip: &dyn Recipient) -> Result<SecBuf<HostEnc>> {
+        self.decrypt(ident)
+            .and_then(|d| d.encrypt(iter::once(receip)))
+    }
+}
+
+impl SecBuf<Plain> {
+    /// encrypt with host pub key, ssh key
+    pub fn encrypt<'a>(
+        self,
+        receips: impl Iterator<Item = &'a dyn Recipient>,
+    ) -> Result<SecBuf<HostEnc>> {
+        let encryptor =
+            age::Encryptor::with_recipients(receips).map_err(|_| eyre!("create encryptor err"))?;
+
+        let buf = self.buf_ref();
+        let mut enc_ctx = vec![];
+
+        let mut writer = encryptor.wrap_output(&mut enc_ctx)?;
+
+        use std::io::Write;
+        writer.write_all(buf)?;
+        writer.finish()?;
+        Ok(SecBuf::new(enc_ctx))
+    }
+}

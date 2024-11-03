@@ -1,22 +1,12 @@
-use blake3::Hasher;
 use eyre::{eyre, ContextCompat, Result};
 use spdlog::{debug, error, info, trace};
-use std::{
-    collections::HashMap,
-    fs::{self, File},
-    io::{Read, Write},
-    iter,
-    path::PathBuf,
-    str::FromStr,
-};
+use std::{collections::HashMap, fs, path::PathBuf};
 
 use crate::{
     cmd::stored_sec_path::{InCfg, InStore, SecMap, SecPath},
     profile::{MasterIdentity, Profile},
 };
 use crate::{interop::add_to_store, profile};
-
-use age::{x25519, Identity};
 
 use crate::helper::parse_identity::ParsedIdentity;
 impl Profile {
@@ -36,7 +26,6 @@ impl Profile {
     and add to nix store.
     */
     pub fn renc(self, _all: bool, flake_root: PathBuf) -> Result<()> {
-        use age::ssh;
         let mut key_pair_list = self.get_key_pair_iter();
 
         // check if flake root
@@ -79,19 +68,6 @@ impl Profile {
 
         let key = parsed_ident.get_identity();
 
-        let decrypt = |buffer: &Vec<u8>| -> Result<Vec<u8>> {
-            let decryptor = age::Decryptor::new(&buffer[..])?;
-
-            let mut decrypted = vec![];
-            let mut reader = decryptor.decrypt(iter::once(&**key))?;
-            let res = reader.read_to_end(&mut decrypted);
-            if let Ok(b) = res {
-                debug!("decrypted secret {} bytes", b);
-            }
-
-            Ok(decrypted)
-        };
-
         let sec_need_renc = data_instore_map
             .inner()
             .into_iter()
@@ -124,7 +100,7 @@ impl Profile {
             instore_map,
             sec_need_renc,
             self.settings.host_pubkey.clone(),
-            decrypt,
+            &**key,
         ) {
             let o = add_to_store(renc_path)?;
             if !o.status.success() {
