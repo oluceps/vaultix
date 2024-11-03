@@ -34,8 +34,7 @@ jobs:
         run: |
           nix build .#
         shell: bash
-
-      - name: get metadata
+      - name: cargo check
         run: |
-          nix develop -c just test-metadata
+          nix develop -c cargo check
         shell: bash
