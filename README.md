@@ -87,7 +87,7 @@ nix run .#vaultix.x86_64-linux.renc
 ```
 
 
-# Commands
+## Cli Args
 
 Seldon use cli directly. Use Nix Wrapped App such as `nix run .#vaultix.x86_64-linux.renc`.
 
