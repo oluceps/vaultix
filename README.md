@@ -5,7 +5,7 @@ Secret management for NixOS.
 Highly inspired by agenix-rekey. Based on rust age crate.
 
 > [!CAUTION]
-> This project is in early dev stage, NOT ready for production.
+> This project is in VERY early dev stage, NOT ready for production.
 
 + AGE Key Support
 + PIV Card (Yubikey) Support
