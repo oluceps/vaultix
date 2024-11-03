@@ -88,6 +88,11 @@ nix run .#vaultix.x86_64-linux.renc
 
 # Commands
 
+Seldon use cli directly. Use Nix Wrapped App such as `nix run .#vaultix.x86_64-linux.renc`.
+
+Currently not support `edit` command, you could directly use rage for creating your encrypted file.
+
+
 ```bash
 > ./vaultix --help
 Usage: vaultix <profile> [-f <flake-root>] <command> [<args>]
@@ -103,7 +108,7 @@ Options:
 
 Commands:
   renc              Re-encrypt changed files
-  edit              Edit encrypted file
+  edit              Edit encrypted file # NOT SUPPORT YET
   check             Check secret status
   deploy            Decrypt and deploy cipher credentials
 ```
