@@ -1,9 +1,10 @@
 use eyre::Result;
 use spdlog::error;
 
-use crate::profile::Profile;
-
-use super::stored_sec_path::{InStore, SecMap, SecPath};
+use crate::{
+    helper::stored::{InStore, SecMap, SecPath},
+    profile::Profile,
+};
 
 impl Profile {
     pub fn check(self) -> Result<()> {

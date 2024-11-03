@@ -2,10 +2,8 @@ use eyre::{eyre, ContextCompat, Result};
 use spdlog::{debug, error, info, trace};
 use std::{collections::HashMap, fs, iter, path::PathBuf};
 
-use crate::{
-    cmd::stored_sec_path::{InCfg, InStore, SecMap, SecPath, SumPath},
-    profile::{MasterIdentity, Profile},
-};
+use crate::helper::stored::{SecMap, SumPath};
+use crate::profile::{MasterIdentity, Profile};
 use crate::{interop::add_to_store, profile};
 
 use crate::helper::parse_identity::ParsedIdentity;
@@ -60,6 +58,7 @@ impl Profile {
 
         // from secrets metadata, from real config store
         let data = SecMap::<SumPath>::from(
+            // TODO: beauty
             self.secrets.clone(),
             renc_path.clone(),
             self.settings.host_pubkey.clone(),

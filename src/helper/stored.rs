@@ -3,16 +3,13 @@ use std::{
     fmt,
     fs::{self, File},
     io::Read,
-    iter,
     path::{Path, PathBuf},
     rc::Rc,
-    str::FromStr,
 };
 
 use age::{Identity, Recipient};
 use eyre::Context;
-use nom::AsBytes;
-use spdlog::{debug, info, trace};
+use spdlog::trace;
 
 use crate::{
     helper::secret_buf::{AgeEnc, SecBuf},

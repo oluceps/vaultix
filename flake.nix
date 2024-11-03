@@ -50,6 +50,11 @@
             system,
             ...
           }:
+          let
+            toolchain = pkgs.rust-bin.nightly.latest.minimal;
+            craneLib = (crane.mkLib pkgs).overrideToolchain toolchain;
+            inherit (craneLib) buildPackage;
+          in
           {
             _module.args.pkgs = import inputs.nixpkgs {
               inherit system;
@@ -70,30 +75,26 @@
             };
 
             packages = rec {
-              default =
-                let
-                  toolchain = pkgs.rust-bin.nightly.latest.minimal;
-                  craneLib = (crane.mkLib pkgs).overrideToolchain toolchain;
-                  inherit (craneLib) buildPackage;
-                in
-                (buildPackage {
+              default = (
+                buildPackage {
                   src = craneLib.cleanCargoSource ./.;
                   nativeBuildInputs = [
                     pkgs.rustPlatform.bindgenHook
                   ];
                   meta.mainProgram = "vaultix";
-                });
+                }
+              );
               vaultix = default;
             };
 
             formatter = pkgs.nixfmt-rfc-style;
 
-            devShells.default = pkgs.mkShell {
+            devShells.default = craneLib.devShell {
               inputsFrom = [
                 pkgs.vaultix
               ];
 
-              RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
+              # RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
               buildInputs = with pkgs; [
                 just
                 nushell

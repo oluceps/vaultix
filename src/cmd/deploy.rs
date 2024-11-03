@@ -1,26 +1,25 @@
 use std::{
     collections::HashMap,
-    fs::{self, DirEntry, File, OpenOptions, Permissions, ReadDir},
-    io::{ErrorKind, Read, Write},
-    iter,
+    fs::{self, OpenOptions, Permissions, ReadDir},
+    io::{ErrorKind, Write},
     os::unix::fs::PermissionsExt,
-    path::{Path, PathBuf},
+    path::PathBuf,
     rc::Rc,
     str::FromStr,
 };
 
 use crate::{
-    cmd::stored_sec_path::{InStore, SecMap, SecPath},
     helper::{
         self,
         secret_buf::{HostEnc, SecBuf},
+        stored::{InStore, SecMap, SecPath},
     },
     profile::{self, HostKey, Profile},
 };
 
-use age::{x25519, Recipient};
+use age::Recipient;
 use eyre::{eyre, Context, Result};
-use spdlog::{debug, error, info, trace, warn};
+use spdlog::{debug, error, info, trace};
 use sys_mount::{Mount, MountFlags, SupportedFilesystems};
 
 impl HostKey {
@@ -64,7 +63,7 @@ impl Profile {
             .map_err(|_| eyre!("parse pubkey error"))?;
         Ok(Rc::new(host_pubkey) as Rc<dyn Recipient>)
     }
-    pub fn get_extra_recip(&self) -> Result<impl Iterator<Item = Box<dyn Recipient>>> {
+    pub fn _get_extra_recip(&self) -> Result<impl Iterator<Item = Box<dyn Recipient>>> {
         let extra_recips = self
             .settings
             .extra_recipients

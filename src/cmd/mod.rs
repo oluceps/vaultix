@@ -1,10 +1,8 @@
-use std::{array::TryFromSliceError, fs, path::PathBuf};
+use std::{fs, path::PathBuf};
 
-use eyre::{eyre, Context};
+use eyre::Context;
 use spdlog::prelude::*;
 use {argh::FromArgs, std::fmt::Debug};
-
-mod stored_sec_path;
 
 mod check;
 mod deploy;
@@ -54,11 +52,7 @@ pub struct EditSubCmd {
 #[derive(FromArgs, PartialEq, Debug)]
 /// Decrypt and deploy cipher credentials
 #[argh(subcommand, name = "deploy")]
-pub struct DeploySubCmd {
-    #[argh(option, short = 's')]
-    /// per hostkey encrypted dir
-    storage: Option<String>,
-}
+pub struct DeploySubCmd {}
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// Check secret status
@@ -88,12 +82,11 @@ impl Args {
                 info!("start re-encrypt secrets");
                 profile.renc(all, flake_root)
             }
-            SubCmd::Deploy(DeploySubCmd { ref storage }) => {
+            SubCmd::Deploy(DeploySubCmd {}) => {
                 info!("deploying secrets");
-                // todo!()
                 profile.deploy()
             }
-            SubCmd::Edit(_) => todo!(),
+            SubCmd::Edit(_) => todo!("you can directly use rage."),
             SubCmd::Check(_) => {
                 info!("start checking");
                 profile.check()?;
