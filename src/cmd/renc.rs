@@ -1,10 +1,10 @@
 use eyre::{eyre, ContextCompat, Result};
-use spdlog::{debug, error, info, trace};
-use std::{collections::HashMap, fs, iter, path::PathBuf};
+use spdlog::{error, info};
+use std::{fs, path::PathBuf};
 
 use crate::helper::stored::{SecMap, SumPath};
+use crate::interop::add_to_store;
 use crate::profile::{MasterIdentity, Profile};
-use crate::{interop::add_to_store, profile};
 
 use crate::helper::parse_identity::ParsedIdentity;
 impl Profile {

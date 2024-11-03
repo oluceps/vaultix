@@ -3,7 +3,7 @@ use std::{
     process::{Command, Output},
 };
 
-use eyre::{eyre, Context, Result};
+use eyre::{eyre, Result};
 
 pub fn add_to_store<P: AsRef<Path>>(p: P) -> Result<Output> {
     Command::new("nix")

@@ -1,27 +1,15 @@
-use std::{fs, str::FromStr};
-
 use crate::profile::MasterIdentity;
-use age::{x25519, Identity, IdentityFile, Recipient};
+use age::{Identity, IdentityFile, Recipient};
 use eyre::{eyre, ContextCompat, Result};
-use spdlog::{debug, error, info};
 
 use super::callback::UiCallbacks;
 
+#[allow(dead_code)]
 pub struct ParsedIdentity {
     identity: Box<dyn Identity>,
     recipient: Box<dyn Recipient>,
 }
 impl ParsedIdentity {
-    // pub fn new<I, R>(identity: I, recipient: R) -> Self
-    // where
-    //     I: Identity + 'static,
-    //     R: Recipient + 'static,
-    // {
-    //     Self {
-    //         identity: Box::new(identity),
-    //         recipient: Box::new(recipient),
-    //     }
-    // }
     pub fn from_exist(identity: Box<dyn Identity>, recipient: Box<dyn Recipient>) -> Self {
         Self {
             identity,
@@ -31,7 +19,7 @@ impl ParsedIdentity {
     pub fn get_identity(&self) -> &Box<dyn Identity> {
         &self.identity
     }
-    pub fn get_recipient(&self) -> &Box<dyn Recipient> {
+    pub fn _get_recipient(&self) -> &Box<dyn Recipient> {
         &self.recipient
     }
 }

@@ -1,4 +1,3 @@
-use eyre::Result;
 use std::collections::HashMap;
 
 use serde::Deserialize;
@@ -29,6 +28,7 @@ pub struct Settings {
     pub decrypted_dir: String,
     pub decrypted_mount_point: String,
     pub host_identifier: String,
+    #[allow(dead_code)]
     pub extra_recipients: Vec<String>,
     pub host_pubkey: String,
     pub host_keys: Vec<HostKey>,
@@ -40,6 +40,7 @@ pub struct Settings {
 #[derive(Debug, Deserialize)]
 pub struct MasterIdentity {
     pub identity: String,
+    #[allow(dead_code)]
     pub pubkey: String,
 }
 #[derive(Debug, Deserialize)]
