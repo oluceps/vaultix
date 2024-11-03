@@ -12,10 +12,9 @@ Highly inspired by agenix-rekey. Based on rust age crate.
 
 ## Prerequisite:
 
-+ flake
-+ `nix-command` and `flake` feature enabled
-+ flake-parts
++ `flake-parts` structured config
 + `self` as specialArgs, to `nixosSystem`
++ `nix-command` and `flake` feature enabled
 + `systemd.sysusers` or `services.userborn` option enabled
 
 
