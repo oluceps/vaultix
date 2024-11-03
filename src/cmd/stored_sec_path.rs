@@ -108,7 +108,6 @@ impl<T> SecPath<PathBuf, T> {
 impl<T> SecMap<SecPath<PathBuf, T>> {
     /// read secret file
     pub fn bake_ctx(self) -> Result<SecMap<Vec<u8>>> {
-        info!("bake_ctx");
         self.inner()
             .into_iter()
             // TODO: reduce read
@@ -144,7 +143,6 @@ impl SecMap<SecPath<PathBuf, InStore>> {
                         hasher.update(b.as_slice());
                         hasher.update(host_pubkey.as_bytes());
                         let hash_final = hasher.finalize();
-                        info!("hash 1 {}", hash_final.to_string());
                         Ok(hash_final.to_string())
                     })
                     .expect("hash");
@@ -200,7 +198,6 @@ impl SecMap<SumPath> {
                 Some((k, v))
             })
             .collect();
-        // info!("filtered {:?}", a);
         ret
     }
 
@@ -211,7 +208,7 @@ impl SecMap<SumPath> {
                 let SumPath { store, real } = sec_path;
                 use std::io::Write;
 
-                info!("output path {}", real.path.display());
+                trace!("re-encrypted output path {}", real.path.display());
                 let enc_ctx = store.read_buffer().expect("read buffer in store err");
                 // rencrypt
                 let renc_ctx = SecBuf::<AgeEnc>::new(enc_ctx)
