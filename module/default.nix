@@ -149,7 +149,7 @@ let
         ];
       };
 
-      extraReceipients = mkOption {
+      extraRecipients = mkOption {
         type = with types; listOf (coercedTo path toString str);
 
         default = [ ];

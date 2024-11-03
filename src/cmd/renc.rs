@@ -1,9 +1,9 @@
 use eyre::{eyre, ContextCompat, Result};
 use spdlog::{debug, error, info, trace};
-use std::{collections::HashMap, fs, path::PathBuf};
+use std::{collections::HashMap, fs, iter, path::PathBuf};
 
 use crate::{
-    cmd::stored_sec_path::{InCfg, InStore, SecMap, SecPath},
+    cmd::stored_sec_path::{InCfg, InStore, SecMap, SecPath, SumPath},
     profile::{MasterIdentity, Profile},
 };
 use crate::{interop::add_to_store, profile};
@@ -27,6 +27,10 @@ impl Profile {
     */
     pub fn renc(self, _all: bool, flake_root: PathBuf) -> Result<()> {
         let mut key_pair_list = self.get_key_pair_iter();
+        info!(
+            "rencrypt for host {}",
+            self.settings.host_identifier.clone()
+        );
 
         // check if flake root
         if !fs::read_dir(&flake_root)?.into_iter().any(|e| {
@@ -55,12 +59,12 @@ impl Profile {
         };
 
         // from secrets metadata, from real config store
-        let data = SecMap::<SecPath<_, InCfg>>::from(self.secrets.clone(), renc_path.clone());
-
-        let instore_map = SecMap::<SecPath<_, InStore>>::from(self.secrets.clone());
-        let data_instore_map = instore_map
-            .clone()
-            .calc_renc(self.settings.host_pubkey.clone())?;
+        let data = SecMap::<SumPath>::from(
+            self.secrets.clone(),
+            renc_path.clone(),
+            self.settings.host_pubkey.clone(),
+        )
+        .filter_exist(renc_path.clone(), self.settings.host_pubkey.clone());
 
         let parsed_ident = key_pair_list
             .find(|k| k.is_ok())
@@ -68,40 +72,10 @@ impl Profile {
 
         let key = parsed_ident.get_identity();
 
-        let sec_need_renc = data_instore_map
-            .inner()
-            .into_iter()
-            .filter(|(k, v)| {
-                // TODO: extraReceip
-                let hash = v;
-                let renc_path = {
-                    let mut path = renc_path.clone();
-                    path.push(hash.to_string());
-                    trace!("checking {}", path.display());
-                    path
-                };
-
-                debug!("comparing {}", renc_path.display());
-
-                let exs = renc_path.exists();
-
-                if exs {
-                    info!("skipping {} since exist", k.id)
-                }
-
-                !exs
-            })
-            .collect::<HashMap<profile::Secret, blake3::Hash>>()
-            .into_keys()
-            .collect::<Vec<profile::Secret>>();
-
-        // TODO: host pub key type safe
-        if let Ok(_) = data.makeup(
-            instore_map,
-            sec_need_renc,
-            self.settings.host_pubkey.clone(),
-            &**key,
-        ) {
+        let recip = self.get_host_recip()?;
+        if let Err(e) = data.makeup(vec![recip], &**key) {
+            return Err(eyre!("makeup error: {}", e));
+        } else {
             let o = add_to_store(renc_path)?;
             if !o.status.success() {
                 error!("Command executed with failing error code");
