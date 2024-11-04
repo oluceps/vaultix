@@ -49,19 +49,25 @@ Adding nixosModule config:
 {
   imports = [ inputs.vaultix.nixosModules.default ];
   vaultix = {
+
     settings = {
+      storageLocation =
       # relative to flake root, used for storing host public key -
       # re-encrypted secrets.
-      storageLocation = "./secret/renc/${config.networking.hostName}";
+        "./secret/renc/${config.networking.hostName}";
+
       # extraRecipients =
       # not supported yet, plain to used in edit command
       #  [ data.keys.ageKey ];
+
       identity =
         # See https://github.com/str4d/age-plugin-yubikey
         # Also supports age native secrets (with password encrypted)
         (self + "/secret/age-yubikey-identity-0000ffff.txt.pub");
     };
+
     secrets = {
+    # this parts keeps identical with agenix
       example = {
         file = ./secret/example.age;
         mode = "640";
@@ -71,7 +77,6 @@ Adding nixosModule config:
         # symlink = true; # both not supported yet
         # path = "/some/place";
       };
-      # ...
     };
   };
 }
@@ -93,7 +98,7 @@ nix run .#vaultix.x86_64-linux.renc
 
 ## Cli Args
 
-Seldon use cli directly. Use Nix Wrapped App such as `nix run .#vaultix.x86_64-linux.renc`.
+Seldom use cli directly. Use Nix Wrapped App such as `nix run .#vaultix.x86_64-linux.renc`.
 
 Currently not support `edit` command, you could directly use rage for creating your encrypted file.
 
