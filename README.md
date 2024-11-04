@@ -14,7 +14,6 @@ Highly inspired by agenix-rekey. Based on rust age crate.
 + AGE Support Only
 + PIV Card (Yubikey) Support
 + Age Plugin Compatible
-+ `~2M` Sized Binary
 + No Bash
 
 ## Prerequisite:
