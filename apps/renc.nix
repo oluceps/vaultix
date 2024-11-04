@@ -19,7 +19,10 @@ writeShellScriptBin "renc" (
     map (
       n:
       let
-        profile = (pkgs.formats.toml { }).generate "secret-meta" n;
+        profile = pkgs.writeTextFile {
+          name = "secret-meta";
+          text = builtins.toJSON n;
+        };
       in
       "${bin} ${profile} renc"
     ) vaultixs

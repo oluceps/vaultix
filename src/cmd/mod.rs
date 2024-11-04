@@ -66,7 +66,7 @@ impl Args {
 
         let profile: Profile = {
             let file = fs::read_to_string(&self.profile).wrap_err("arg `profile` not found")?;
-            toml::from_str(file.as_str())?
+            serde_json::from_str(file.as_str())?
         };
 
         let flake_root = if let Some(f) = &self.flake_root {
