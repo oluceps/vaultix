@@ -1,4 +1,4 @@
-use crate::profile::MasterIdentity;
+use crate::profile::RawIdentity;
 use age::{Identity, IdentityFile, Recipient};
 use eyre::{eyre, ContextCompat, Result};
 
@@ -24,18 +24,19 @@ impl ParsedIdentity {
     }
 }
 
-impl MasterIdentity {
+impl RawIdentity {
     // get identiy and recipient from identity file,
     // only file that contains info of identity and recip supported at present
     // which is expected while using age generated identity
-    pub fn parse(
-        Self {
+    pub fn parse_from_raw(&self) -> Result<ParsedIdentity> {
+        let Self {
             identity,
-            pubkey: _, // not required. trans from prv key so fast.
-        }: &Self,
-    ) -> Result<ParsedIdentity> {
+            pubkey: _, // not required. gen from prv key so fast.
+        } = self;
         if identity.is_empty() {
-            return Err(eyre!("No identity found"));
+            return Err(eyre!(
+                "No identity found, require `vaultix.settings.identity`."
+            ));
         } else {
             macro_rules! create {
                 ($method:ident,  $err_context:expr) => {{

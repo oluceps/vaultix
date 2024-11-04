@@ -1,18 +1,15 @@
-use eyre::{eyre, ContextCompat, Result};
+use eyre::{eyre, Result};
 use spdlog::{error, info};
 use std::{fs, path::PathBuf};
 
 use crate::helper::stored::Renc;
 use crate::interop::add_to_store;
-use crate::profile::{MasterIdentity, Profile};
+use crate::profile::Profile;
 
 use crate::helper::parse_identity::ParsedIdentity;
 impl Profile {
-    pub fn get_key_pair_iter<'a>(&'a self) -> impl Iterator<Item = Result<ParsedIdentity>> + 'a {
-        self.settings
-            .master_identities
-            .iter()
-            .map(MasterIdentity::parse)
+    pub fn get_parsed_ident(&self) -> Result<ParsedIdentity> {
+        self.settings.identity.parse_from_raw()
     }
 
     /**
@@ -24,7 +21,6 @@ impl Profile {
     and add to nix store.
     */
     pub fn renc(self, _all: bool, flake_root: PathBuf) -> Result<()> {
-        let mut key_pair_list = self.get_key_pair_iter();
         info!(
             "rencrypt for host {}",
             self.settings.host_identifier.clone()
@@ -47,7 +43,7 @@ impl Profile {
         // absolute path, in config directory, suffix host ident
         let renc_path = {
             let mut p = flake_root.clone();
-            p.push(self.settings.storage_dir_relative.clone());
+            p.push(self.settings.storage_location.clone());
             let p = p.canonicalize()?;
             info!(
                 "reading user identity encrypted dir under flake root: {}",
@@ -64,11 +60,8 @@ impl Profile {
         )
         .filter_exist();
 
-        let parsed_ident = key_pair_list
-            .find(|k| k.is_ok())
-            .wrap_err_with(|| eyre!("available keypair not found"))??;
-
-        let key = parsed_ident.get_identity();
+        let key_pair = self.get_parsed_ident()?;
+        let key = key_pair.get_identity();
 
         let recip = self.get_host_recip()?;
         if let Err(e) = data.map.makeup(vec![recip], &**key) {

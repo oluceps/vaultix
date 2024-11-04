@@ -144,7 +144,7 @@ impl Profile {
         let sec_ciphertext_map: HashMap<profile::Secret, Vec<u8>> =
             SecMap::<SecPath<_, InStore>>::from(self.secrets.clone())
                 .renced(
-                    self.settings.storage_dir_store.clone().into(),
+                    self.settings.storage_in_store.clone().into(),
                     self.settings.host_pubkey.clone(),
                 )
                 .bake_ctx()?

@@ -42,6 +42,8 @@ outputs = inputs@{ flake-parts, self, ... }:
 inputs.vaultix.url = "github:oluceps/vaultix";
 ```
 
+Adding nixosModule config:
+
 ```nix
 # configuration.nix
 {
@@ -50,13 +52,14 @@ inputs.vaultix.url = "github:oluceps/vaultix";
     settings = {
       # relative to flake root, used for storing host public key -
       # re-encrypted secrets.
-      storageDirRelative = "./secret/renc/${config.networking.hostName}";
-      # extraRecipients = [ data.keys.ageKey ]; # not supported yet
-      masterIdentities = [
+      storageLocation = "./secret/renc/${config.networking.hostName}";
+      # extraRecipients =
+      # not supported yet, plain to used in edit command
+      #  [ data.keys.ageKey ];
+      identity =
         # See https://github.com/str4d/age-plugin-yubikey
-        # Also supports age native secrets
-        (self + "/secret/age-yubikey-identity-0000ffff.txt.pub")
-      ];
+        # Also supports age native secrets (with password encrypted)
+        (self + "/secret/age-yubikey-identity-0000ffff.txt.pub");
     };
     secrets = {
       example = {
@@ -65,7 +68,8 @@ inputs.vaultix.url = "github:oluceps/vaultix";
         owner = "root";
         group = "users";
         name = "example.toml";
-        # path = "/some/place"; # not supported yet
+        # symlink = true; # both not supported yet
+        # path = "/some/place";
       };
       # ...
     };
@@ -74,15 +78,15 @@ inputs.vaultix.url = "github:oluceps/vaultix";
 ```
 
 > [!TIP]
-> During first setup, you need to manually create `storageDirRelative` and
+> During first setup, you need to manually create `storageLocation` and
 > add it to git (create an placeholder since git ignores empty directory).
 
 ```bash
-mkdir -p ./secret/renc/YOUR_HOSTNAME_HERE
-touch ./secret/renc/YOUR_HOSTNAME_HERE/.placeholder
-# so that you could add the directory to git (for recognizing by flake)
+mkdir -p ./secret/renc/HOSTNAME_HERE
+touch ./secret/renc/HOSTNAME_HERE/.placeholder
+# So that you could add the directory to git (for recognizing by flake).
 git add .
-# after this step you could remove placeholder
+# Freely could remove placeholder once complete this step.
 nix run .#vaultix.x86_64-linux.renc
 ```
 

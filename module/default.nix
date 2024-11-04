@@ -28,23 +28,23 @@ let
     options.systemd ? sysusers && (config.systemd.sysusers.enable || config.services.userborn.enable)
   ) "`systemd.sysusers` or `services.userborn` must be enabled.";
 
-  storagePath = self + "/" + cfg.settings.storageDirRelative;
+  storagePath = self + "/" + cfg.settings.storageLocation;
   storageExist = assertMsg (builtins.pathExists storagePath) "${storagePath} doesn't exist plz manually create and add to git first (may need a placeholder for git to recognize it)";
 
   settingsType = types.submodule (submod: {
     options = {
 
-      storageDirRelative = mkOption {
+      storageLocation = mkOption {
         type = types.str;
         example = literalExpression ''./. /* <- flake root */ + "/secrets/renced/myhost" /* separate folder for each host */'';
         description = ''
           The local storage directory for re-encrypted secrets. MUST be a str of path related to flake root.
         '';
       };
-      storageDirStore = mkOption {
+      storageInStore = mkOption {
         type = types.path;
         readOnly = true;
-        default = builtins.path { path = self + "/" + submod.config.storageDirRelative; };
+        default = builtins.path { path = self + "/" + submod.config.storageLocation; };
         example = literalExpression ''./. /* <- flake root */ + "/secrets/renced/myhost" /* separate folder for each host */'';
         description = ''
           The local storage directory for re-encrypted secrets. MUST be a str of path related to flake root.
@@ -104,21 +104,13 @@ let
         '';
       };
 
-      masterIdentities = mkOption {
+      identity = mkOption {
         type =
           with types;
           let
             identityPathType = coercedTo path toString str;
           in
-          listOf (
-            # By coercing the old identityPathType into a canonical submodule of the form
-            # ```
-            # {
-            #   identity = <identityPath>;
-            #   pubkey = ...;
-            # }
-            # ```
-            # we don't have to worry about it at a later stage.
+          nullOr (
             coercedTo identityPathType
               (
                 p:
@@ -139,14 +131,11 @@ let
                 };
               })
           );
-        default = [ ];
-        example = [
-          ./secrets/my-public-yubikey-identity.txt.pub
-          {
-            identity = ./password-encrypted-identity.pub;
-            pubkey = "age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs3290gq";
-          }
-        ];
+        default = null;
+        example = {
+          identity = ./password-encrypted-identity.pub;
+          pubkey = "age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs3290gq";
+        };
       };
 
       extraRecipients = mkOption {
@@ -281,7 +270,7 @@ in
         serviceConfig = {
           Type = "oneshot";
           Environment = [
-            ("STORAGE:" + cfg.settings.storageDirStore)
+            ("STORAGE=" + cfg.settings.storageInStore)
             checkRencSecsReport
           ];
           ExecStart = "${lib.getExe cfg.package} ${profile} deploy";

@@ -32,13 +32,13 @@ pub struct Settings {
     pub extra_recipients: Vec<String>,
     pub host_pubkey: String,
     pub host_keys: Vec<HostKey>,
-    pub storage_dir_relative: String,
-    pub storage_dir_store: String,
-    pub master_identities: Vec<MasterIdentity>,
+    pub storage_location: String,
+    pub storage_in_store: String,
+    pub identity: RawIdentity,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct MasterIdentity {
+pub struct RawIdentity {
     pub identity: String,
     #[allow(dead_code)]
     pub pubkey: String,
