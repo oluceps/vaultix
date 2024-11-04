@@ -265,7 +265,7 @@ in
 
   config =
     let
-      profile = (pkgs.formats.toml { }).generate "secret-meta" cfg;
+      profile = (pkgs.formats.toml { }).generate "secret-meta-${config.networking.hostName}" cfg;
       checkRencSecsReport =
         pkgs.runCommandNoCCLocal "secret-check-report" { }
           "${lib.getExe cfg.package} ${profile} check > $out";
