@@ -82,16 +82,11 @@ Adding nixosModule config:
 }
 ```
 
-> [!TIP]
-> During first setup, you need to manually create `storageLocation` and
-> add it to git (create an placeholder since git ignores empty directory).
+Then run renc before deploy.
+
+This step also needed every time the host key or secret content changed.
 
 ```bash
-mkdir -p ./secret/renc/HOSTNAME_HERE
-touch ./secret/renc/HOSTNAME_HERE/.placeholder
-# So that you could add the directory to git (for recognizing by flake).
-git add .
-# Freely could remove placeholder once complete this step.
 nix run .#vaultix.x86_64-linux.renc
 ```
 

@@ -32,9 +32,11 @@ let
   # TODO: canonicalize this path, beauty
   storagePath = "/" + self + "/" + cfg.settings.storageLocation;
   storageExist = builtins.pathExists storagePath;
-  storageNotFoundWarn = warnIf (
-    !storageExist
-  ) "[31mpath not exist: ${storagePath}\n[41;97mThis build will fail[0m please run renc app and add ${cfg.settings.storageLocation} to git first." true;
+  storageNotFoundWarn =
+    warnIf (!storageExist)
+      # NOTICE: here has ASCII control char `\e` which may not shown in editor
+      "[31mpath not exist: ${storagePath}\n[41;97mThis build will fail[0m please run renc app and add ${cfg.settings.storageLocation} to git first."
+      true;
 
   settingsType = types.submodule (submod: {
     options = {
