@@ -125,6 +125,8 @@ impl SecMap<SecPath<PathBuf, InStore>> {
             .collect();
         SecMap::<SecPath<PathBuf, InStore>>(res)
     }
+
+    /// return self but processed the path to produce in-store storageInStore/[hash] map
     pub fn renced(self, per_host_dir: PathBuf, host_pubkey: String) -> Self {
         let res = self
             .inner()

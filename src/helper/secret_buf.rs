@@ -50,13 +50,11 @@ impl SecBuf<AgeEnc> {
     }
 }
 use eyre::eyre;
-use spdlog::info;
 
 impl SecBuf<Plain> {
     /// encrypt with host pub key, ssh key
     pub fn encrypt(self, recips: Vec<Rc<dyn Recipient>>) -> Result<SecBuf<HostEnc>> {
         let recips_iter = recips.iter().map(|boxed| boxed.as_ref() as &dyn Recipient);
-        info!("things in recips iter {}", recips.len());
         let encryptor = age::Encryptor::with_recipients(recips_iter)
             .map_err(|_| eyre!("create encryptor err"))?;
 

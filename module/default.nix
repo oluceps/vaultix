@@ -18,6 +18,7 @@ let
     mkEnableOption
     mkIf
     assertMsg
+    warnIf
     ;
   inherit (config.users) users;
 
@@ -28,8 +29,12 @@ let
     options.systemd ? sysusers && (config.systemd.sysusers.enable || config.services.userborn.enable)
   ) "`systemd.sysusers` or `services.userborn` must be enabled.";
 
-  storagePath = self + "/" + cfg.settings.storageLocation;
-  storageExist = assertMsg (builtins.pathExists storagePath) "${storagePath} doesn't exist plz manually create and add to git first (may need a placeholder for git to recognize it)";
+  # TODO: canonicalize this path, beauty
+  storagePath = "/" + self + "/" + cfg.settings.storageLocation;
+  storageExist = builtins.pathExists storagePath;
+  storageNotFoundWarn = warnIf (
+    !storageExist
+  ) "[31mpath not exist: ${storagePath}\n[41;97mThis build will fail[0m please run renc app and add ${cfg.settings.storageLocation} to git first." true;
 
   settingsType = types.submodule (submod: {
     options = {
@@ -44,7 +49,11 @@ let
       storageInStore = mkOption {
         type = types.path;
         readOnly = true;
-        default = builtins.path { path = self + "/" + submod.config.storageLocation; };
+        default =
+          if builtins.pathExists storagePath then
+            (builtins.path { path = self + "/" + submod.config.storageLocation; })
+          else
+            pkgs.emptyDirectory;
         example = literalExpression ''./. /* <- flake root */ + "/secrets/renced/myhost" /* separate folder for each host */'';
         description = ''
           The local storage directory for re-encrypted secrets. MUST be a str of path related to flake root.
@@ -262,7 +271,7 @@ in
         pkgs.runCommandNoCCLocal "secret-check-report" { }
           "${lib.getExe cfg.package} ${profile} check > $out";
     in
-    mkIf (sysusers && storageExist) {
+    mkIf (sysusers && storageNotFoundWarn) {
       systemd.services.vaultix-install-secrets = {
         wantedBy = [ "sysinit.target" ];
         after = [ "systemd-sysusers.service" ];

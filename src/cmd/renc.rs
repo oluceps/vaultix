@@ -1,4 +1,4 @@
-use eyre::{eyre, Result};
+use eyre::{eyre, Context, Result};
 use spdlog::{error, info};
 use std::{fs, path::PathBuf};
 
@@ -44,7 +44,10 @@ impl Profile {
         let renc_path = {
             let mut p = flake_root.clone();
             p.push(self.settings.storage_location.clone());
-            let p = p.canonicalize()?;
+            if let Err(_) = p.canonicalize() {
+                fs::create_dir_all(&p).wrap_err_with(|| eyre!("create storageLocation error"))?
+            };
+            p.canonicalize()?;
             info!(
                 "reading user identity encrypted dir under flake root: {}",
                 p.display()
