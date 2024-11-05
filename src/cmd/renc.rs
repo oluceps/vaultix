@@ -22,7 +22,7 @@ impl Profile {
     */
     pub fn renc(self, _all: bool, flake_root: PathBuf) -> Result<()> {
         info!(
-            "rencrypt for host {}",
+            "rencrypt for host [{}]",
             self.settings.host_identifier.clone()
         );
 
@@ -59,7 +59,7 @@ impl Profile {
         let data = Renc::new(
             self.secrets.clone(),
             renc_path.clone(),
-            self.settings.host_pubkey.clone(),
+            self.settings.host_pubkey.as_str(),
         )
         .filter_exist();
 

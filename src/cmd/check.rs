@@ -11,7 +11,7 @@ impl Profile {
         let s_p_map = SecMap::<SecPath<_, InStore>>::from(self.secrets)
             .renced(
                 self.settings.storage_in_store.clone().into(),
-                self.settings.host_pubkey,
+                self.settings.host_pubkey.as_str(),
             )
             .inner();
 

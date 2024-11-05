@@ -79,7 +79,7 @@ impl Args {
 
         match self.app {
             SubCmd::Renc(RencSubCmd { all }) => {
-                info!("start re-encrypt secrets");
+                debug!("start re-encrypt secrets");
                 profile.renc(all, flake_root)
             }
             SubCmd::Deploy(DeploySubCmd {}) => {

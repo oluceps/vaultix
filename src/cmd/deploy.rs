@@ -145,7 +145,7 @@ impl Profile {
             SecMap::<SecPath<_, InStore>>::from(self.secrets.clone())
                 .renced(
                     self.settings.storage_in_store.clone().into(),
-                    self.settings.host_pubkey.clone(),
+                    self.settings.host_pubkey.as_str(),
                 )
                 .bake_ctx()?
                 .inner();

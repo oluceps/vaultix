@@ -1,3 +1,4 @@
+- [ ] [gc] garbage collection
 - [ ] [edit] extra encrypt key
 - [ ] deploy to other directory
 - [x] check command
