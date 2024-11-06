@@ -73,8 +73,8 @@ where
 macro_rules! impl_from_iterator_for_secmap {
     ($($t:ty),*) => {
         $(
-            impl FromIterator<(profile::Secret, $t)> for SecMap<$t> {
-                fn from_iter<I: IntoIterator<Item = (profile::Secret, $t)>>(iter: I) -> Self {
+            impl<'a> FromIterator<(&'a profile::Secret, $t)> for SecMap<'a,$t> {
+                fn from_iter<I: IntoIterator<Item = (&'a profile::Secret, $t)>>(iter: I) -> Self {
                     let map = HashMap::from_iter(iter);
                     SecMap(map)
                 }
@@ -86,14 +86,11 @@ macro_rules! impl_from_iterator_for_secmap {
 impl_from_iterator_for_secmap!(Vec<u8>, blake3::Hash);
 
 #[derive(Debug, Clone)]
-pub struct SecMap<P>(HashMap<profile::Secret, P>);
+pub struct SecMap<'a, P>(HashMap<&'a profile::Secret, P>);
 
-impl<T> SecMap<T> {
-    pub fn inner(self) -> HashMap<profile::Secret, T> {
+impl<'a, T> SecMap<'a, T> {
+    pub fn inner(self) -> HashMap<&'a profile::Secret, T> {
         self.0
-    }
-    pub fn inner_ref(&self) -> &HashMap<profile::Secret, T> {
-        &self.0
     }
 }
 impl<T> SecPath<PathBuf, T> {
@@ -105,9 +102,9 @@ impl<T> SecPath<PathBuf, T> {
     }
 }
 
-impl<T> SecMap<SecPath<PathBuf, T>> {
+impl<'a, T> SecMap<'a, SecPath<PathBuf, T>> {
     /// read secret file
-    pub fn bake_ctx(self) -> Result<SecMap<Vec<u8>>> {
+    pub fn bake_ctx(self) -> Result<SecMap<'a, Vec<u8>>> {
         self.inner()
             .into_iter()
             .map(|(k, v)| v.read_buffer().and_then(|b| Ok((k, b))))
@@ -115,11 +112,11 @@ impl<T> SecMap<SecPath<PathBuf, T>> {
     }
 }
 
-impl SecMap<SecPath<PathBuf, InStore>> {
-    pub fn from(secrets: SecretSet) -> Self {
+impl<'a> SecMap<'a, SecPath<PathBuf, InStore>> {
+    pub fn from(secrets: &'a SecretSet) -> Self {
         SecMap::<SecPath<_, InStore>>(
             secrets
-                .into_values()
+                .values()
                 .map(|s| {
                     let secret_path = SecPath::<_, InStore>::new(PathBuf::from(s.file.clone()));
                     (s, secret_path)
@@ -142,7 +139,7 @@ impl SecMap<SecPath<PathBuf, InStore>> {
                 let renced_in_per_host_dir = dir;
                 (k, SecPath::new(renced_in_per_host_dir))
             })
-            .collect::<HashMap<profile::Secret, SecPath<PathBuf, InStore>>>();
+            .collect::<HashMap<&profile::Secret, SecPath<PathBuf, InStore>>>();
         SecMap::<SecPath<_, InStore>>(res)
     }
 }
@@ -160,15 +157,16 @@ impl UniPath {
 }
 
 pub struct Renc<'a> {
-    pub map: SecMap<UniPath>,
+    pub map: SecMap<'a, UniPath>,
     host_dir: PathBuf,
     host_recip: &'a str,
 }
 
 impl<'a> Renc<'a> {
-    pub fn new(secrets: SecretSet, host_dir: PathBuf, host_recip: &'a str) -> Self {
+    pub fn new(secrets: &'a SecretSet, host_dir: PathBuf, host_recip: &'a str) -> Self {
         let p2 = SecMap::<SecPath<PathBuf, InStore>>::from(secrets);
-        let p1 = SecMap::<SecPath<PathBuf, InCfg>>::from(&p2, host_dir.clone(), host_recip).inner();
+        let p1 =
+            SecMap::<SecPath<PathBuf, InCfg>>::from(&secrets, host_dir.clone(), host_recip).inner();
         let p2 = p2.inner();
 
         let mut merged_map = HashMap::new();
@@ -199,7 +197,7 @@ impl<'a> Renc<'a> {
                 }
                 Some((k, v))
             })
-            .collect::<HashMap<profile::Secret, UniPath>>();
+            .collect::<HashMap<&profile::Secret, UniPath>>();
         Renc {
             map: SecMap(ret),
             host_dir: self.host_dir,
@@ -208,7 +206,7 @@ impl<'a> Renc<'a> {
     }
 }
 
-impl SecMap<UniPath> {
+impl<'a> SecMap<'a, UniPath> {
     pub fn makeup(self, recips: Vec<Rc<dyn Recipient>>, ident: &dyn Identity) -> Result<()> {
         self.inner()
             .into_iter()
@@ -236,22 +234,19 @@ impl SecMap<UniPath> {
     }
 }
 
-impl<'a> SecMap<SecPath<PathBuf, InCfg>> {
-    fn from(
-        value: &'a SecMap<SecPath<PathBuf, InStore>>,
-        host_dir: PathBuf,
-        host_recip_str: &str,
-    ) -> Self {
-        let res = value
-            .inner_ref()
+impl<'a> SecMap<'a, SecPath<PathBuf, InCfg>> {
+    fn from(value: &'a SecretSet, host_dir: PathBuf, host_recip_str: &str) -> Self {
+        let b = SecMap::<SecPath<PathBuf, InStore>>::from(value);
+        let res = b
+            .inner()
             .into_iter()
             .map(|(k, v)| {
                 let enc_hash = v.calc_hash(host_recip_str).expect("ok");
                 let mut renc_path = host_dir.clone();
                 renc_path.push(enc_hash.to_string());
-                (k.clone(), SecPath::<_, InCfg>::new(renc_path))
+                (k, SecPath::<_, InCfg>::new(renc_path))
             })
-            .collect::<HashMap<profile::Secret, SecPath<_, InCfg>>>();
+            .collect::<HashMap<&profile::Secret, SecPath<_, InCfg>>>();
         SecMap(res)
     }
 }

@@ -8,7 +8,7 @@ use crate::{
 
 impl Profile {
     pub fn check(self) -> Result<()> {
-        let s_p_map = SecMap::<SecPath<_, InStore>>::from(self.secrets)
+        let s_p_map = SecMap::<SecPath<_, InStore>>::from(&self.secrets)
             .renced(
                 self.settings.storage_in_store.clone().into(),
                 self.settings.host_pubkey.as_str(),

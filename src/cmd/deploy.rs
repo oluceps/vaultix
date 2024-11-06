@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     fs::{self, OpenOptions, Permissions, ReadDir},
     io::{ErrorKind, Write},
     os::unix::fs::PermissionsExt,
@@ -14,7 +13,7 @@ use crate::{
         secret_buf::{HostEnc, SecBuf},
         stored::{InStore, SecMap, SecPath},
     },
-    profile::{self, HostKey, Profile},
+    profile::{HostKey, Profile},
 };
 
 use age::{ssh, x25519, Recipient};
@@ -150,14 +149,13 @@ impl Profile {
     extract secrets to `/run/vaultix.d/$num` and link to `/run/vaultix`
     */
     pub fn deploy(self) -> Result<()> {
-        let sec_ciphertext_map: HashMap<profile::Secret, Vec<u8>> =
-            SecMap::<SecPath<_, InStore>>::from(self.secrets.clone())
-                .renced(
-                    self.settings.storage_in_store.clone().into(),
-                    self.settings.host_pubkey.as_str(),
-                )
-                .bake_ctx()?
-                .inner();
+        let sec_ciphertext_map = SecMap::<SecPath<_, InStore>>::from(&self.secrets)
+            .renced(
+                self.settings.storage_in_store.clone().into(),
+                self.settings.host_pubkey.as_str(),
+            )
+            .bake_ctx()?
+            .inner();
 
         trace!("{:?}", sec_ciphertext_map);
 
@@ -191,7 +189,7 @@ impl Profile {
             info!("{} -> generation {}", n.name, generation_count);
             let mut the_file = {
                 let mut p = target_extract_dir_with_gen.clone();
-                p.push(n.name);
+                p.push(n.name.clone());
 
                 let mode = helper::parse_permission::parse_octal_string(&n.mode).unwrap();
                 let permissions = Permissions::from_mode(mode);
