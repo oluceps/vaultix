@@ -1,6 +1,6 @@
 use crate::profile::RawIdentity;
 use age::{Identity, IdentityFile, Recipient};
-use eyre::{eyre, ContextCompat, Result};
+use eyre::{eyre, ContextCompat};
 
 use super::callback::UiCallbacks;
 
@@ -24,11 +24,9 @@ impl ParsedIdentity {
     }
 }
 
-impl RawIdentity {
-    // get identiy and recipient from identity file,
-    // only file that contains info of identity and recip supported at present
-    // which is expected while using age generated identity
-    pub fn parse_from_raw(&self) -> Result<ParsedIdentity> {
+impl TryInto<ParsedIdentity> for RawIdentity {
+    type Error = eyre::ErrReport;
+    fn try_into(self) -> std::result::Result<ParsedIdentity, Self::Error> {
         let Self {
             identity,
             pubkey: _, // not required. gen from prv key so fast.

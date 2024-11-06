@@ -37,7 +37,7 @@ pub struct Settings {
     pub identity: RawIdentity,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct RawIdentity {
     pub identity: String,
     #[allow(dead_code)]

@@ -9,7 +9,7 @@ use crate::profile::Profile;
 use crate::helper::parse_identity::ParsedIdentity;
 impl Profile {
     pub fn get_parsed_ident(&self) -> Result<ParsedIdentity> {
-        self.settings.identity.parse_from_raw()
+        self.settings.identity.clone().try_into()
     }
 
     /**
