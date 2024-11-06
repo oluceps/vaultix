@@ -69,3 +69,42 @@ impl SecBuf<Plain> {
         Ok(SecBuf::new(enc_ctx))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::{io::Write, str::FromStr};
+
+    use super::*;
+
+    #[test]
+    fn test_renc() {
+        let key = age::x25519::Identity::generate();
+        let pubkey = key.to_public();
+
+        let plaintext = b"Hello world!";
+
+        // Encrypt the plaintext to a ciphertext...
+        let encrypted = {
+            let encryptor = age::Encryptor::with_recipients(iter::once(&pubkey as _))
+                .expect("we provided a recipient");
+
+            let mut encrypted = vec![];
+            let mut writer = encryptor.wrap_output(&mut encrypted).expect("test");
+            writer.write_all(plaintext).expect("test");
+            writer.finish().expect("test");
+
+            encrypted
+        };
+
+        // 0x01
+        let new_recip_str = "age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs3290gq";
+        let buf = SecBuf::<AgeEnc>::new(encrypted);
+        let _ = buf
+            .renc(
+                &key as &dyn Identity,
+                Rc::new(age::x25519::Recipient::from_str(&new_recip_str).unwrap())
+                    as Rc<dyn Recipient>,
+            )
+            .unwrap();
+    }
+}
