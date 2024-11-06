@@ -1,5 +1,5 @@
 use eyre::{eyre, Context, Result};
-use spdlog::{error, info};
+use spdlog::{debug, error, info};
 use std::{fs, path::PathBuf};
 
 use crate::helper::stored::Renc;
@@ -48,7 +48,7 @@ impl Profile {
                 fs::create_dir_all(&p).wrap_err_with(|| eyre!("create storageLocation error"))?
             };
             p.canonicalize()?;
-            info!(
+            debug!(
                 "reading user identity encrypted dir under flake root: {}",
                 p.display()
             );

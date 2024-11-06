@@ -161,9 +161,6 @@ let
 
       hostPubkey = mkOption {
         type = with types; coercedTo path (x: if isPath x then readFile x else x) str;
-        default = # This pubkey is just binary 0x01 in each byte, so you can be sure there is no known private key for this
-          "age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs3290gq";
-
         #example = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI.....";
         #example = "age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs3290gq";
         example = literalExpression "./secrets/host1.pub";
