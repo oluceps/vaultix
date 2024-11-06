@@ -149,15 +149,15 @@ impl Profile {
     extract secrets to `/run/vaultix.d/$num` and link to `/run/vaultix`
     */
     pub fn deploy(self) -> Result<()> {
-        let sec_ciphertext_map = SecMap::<SecPath<_, InStore>>::from(&self.secrets)
-            .renced(
+        let sec_instore_map = SecMap::<SecPath<_, InStore>>::create(&self.secrets)
+            .renced_stored(
                 self.settings.storage_in_store.clone().into(),
                 self.settings.host_pubkey.as_str(),
             )
             .bake_ctx()?
             .inner();
 
-        trace!("{:?}", sec_ciphertext_map);
+        trace!("{:?}", sec_instore_map);
 
         let generation_count = self.init_decrypted_mount_point()?;
 
@@ -181,7 +181,7 @@ impl Profile {
 
         let host_prv_key = &self.get_host_key_identity()?;
 
-        sec_ciphertext_map.into_iter().for_each(|(n, c)| {
+        sec_instore_map.into_iter().for_each(|(n, c)| {
             let ctx = SecBuf::<HostEnc>::new(c)
                 .decrypt(host_prv_key)
                 .expect("err");

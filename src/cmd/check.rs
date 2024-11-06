@@ -8,14 +8,12 @@ use crate::{
 
 impl Profile {
     pub fn check(self) -> Result<()> {
-        let s_p_map = SecMap::<SecPath<_, InStore>>::from(&self.secrets)
-            .renced(
+        SecMap::<SecPath<_, InStore>>::create(&self.secrets)
+            .renced_stored(
                 self.settings.storage_in_store.clone().into(),
                 self.settings.host_pubkey.as_str(),
             )
-            .inner();
-
-        s_p_map
+            .inner()
             .into_values()
             .map(|p| {
                 debug!("checking in-store path: {}", p.path.display());

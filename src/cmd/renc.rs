@@ -56,7 +56,7 @@ impl Profile {
         };
 
         // from secrets metadata, from real config store
-        let data = Renc::new(
+        let data = Renc::create(
             &self.secrets,
             renc_path.clone(),
             self.settings.host_pubkey.as_str(),

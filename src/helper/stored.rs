@@ -35,6 +35,8 @@ pub struct InStore;
 #[derive(Debug, Clone)]
 pub struct InCfg;
 
+type SecPBWith<A> = SecPath<PathBuf, A>;
+
 pub trait GetSec {
     fn read_buffer(&self) -> Result<Vec<u8>>;
     fn open_file(&self) -> Result<File>;
@@ -49,6 +51,13 @@ where
             path,
             _marker: PhantomData,
         }
+    }
+
+    pub fn calc_hash(&self, host_ssh_recip: &str) -> Result<blake3::Hash> {
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(self.read_buffer()?.as_slice());
+        hasher.update(host_ssh_recip.as_bytes());
+        Ok(hasher.finalize())
     }
 }
 
@@ -82,8 +91,22 @@ macro_rules! impl_from_iterator_for_secmap {
         )*
     };
 }
-
 impl_from_iterator_for_secmap!(Vec<u8>, blake3::Hash, UniPath);
+
+macro_rules! impl_into_secmap_for_themap {
+    ($($t:ty),*) => {
+        $(
+            impl<'a> Into<SecMap<'a, SecPBWith<$t>>>
+                for HashMap<&'a profile::Secret, SecPBWith<$t>>
+            {
+                fn into(self) -> SecMap<'a, SecPBWith<$t>> {
+                    SecMap::<SecPBWith<$t>>(self)
+                }
+            }
+        )*
+    };
+}
+impl_into_secmap_for_themap!(InCfg, InStore);
 
 #[derive(Debug, Clone)]
 pub struct SecMap<'a, P>(HashMap<&'a profile::Secret, P>);
@@ -94,14 +117,6 @@ impl<'a, T> SecMap<'a, T> {
     }
     pub fn inner_ref(&self) -> &HashMap<&'a profile::Secret, T> {
         &self.0
-    }
-}
-impl<T> SecPath<PathBuf, T> {
-    pub fn calc_hash(&self, host_ssh_recip: &str) -> Result<blake3::Hash> {
-        let mut hasher = blake3::Hasher::new();
-        hasher.update(self.read_buffer()?.as_slice());
-        hasher.update(host_ssh_recip.as_bytes());
-        Ok(hasher.finalize())
     }
 }
 
@@ -115,9 +130,9 @@ impl<'a, T> SecMap<'a, SecPath<PathBuf, T>> {
     }
 }
 
-impl<'a> SecMap<'a, SecPath<PathBuf, InStore>> {
-    pub fn from(secrets: &'a SecretSet) -> Self {
-        SecMap::<SecPath<_, InStore>>(
+impl<'a> SecMap<'a, SecPBWith<InStore>> {
+    pub fn create(secrets: &'a SecretSet) -> Self {
+        SecMap::<SecPBWith<InStore>>(
             secrets
                 .values()
                 .map(|s| {
@@ -129,9 +144,8 @@ impl<'a> SecMap<'a, SecPath<PathBuf, InStore>> {
     }
 
     /// return self but processed the path to produce in-store storageInStore/[hash] map
-    pub fn renced(self, per_host_dir: PathBuf, host_pubkey: &str) -> Self {
-        let res = self
-            .inner()
+    pub fn renced_stored(self, per_host_dir: PathBuf, host_pubkey: &str) -> Self {
+        self.inner()
             .into_iter()
             .map(|(k, v)| {
                 let mut dir = per_host_dir.clone();
@@ -142,19 +156,19 @@ impl<'a> SecMap<'a, SecPath<PathBuf, InStore>> {
                 let renced_in_per_host_dir = dir;
                 (k, SecPath::new(renced_in_per_host_dir))
             })
-            .collect::<HashMap<&profile::Secret, SecPath<PathBuf, InStore>>>();
-        SecMap::<SecPath<_, InStore>>(res)
+            .collect::<HashMap<&profile::Secret, SecPBWith<InStore>>>()
+            .into()
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct UniPath {
-    store: SecPath<PathBuf, InStore>,
-    real: SecPath<PathBuf, InCfg>,
+    store: SecPBWith<InStore>,
+    real: SecPBWith<InCfg>,
 }
 
 impl UniPath {
-    pub fn new(store: SecPath<PathBuf, InStore>, real: SecPath<PathBuf, InCfg>) -> Self {
+    pub fn new(store: SecPBWith<InStore>, real: SecPBWith<InCfg>) -> Self {
         UniPath { store, real }
     }
 }
@@ -166,9 +180,9 @@ pub struct Renc<'a> {
 }
 
 impl<'a> Renc<'a> {
-    pub fn new(secrets: &'a SecretSet, host_dir: PathBuf, host_recip: &'a str) -> Self {
-        let instore = SecMap::<SecPath<PathBuf, InStore>>::from(secrets);
-        let map = SecMap::<SecPath<PathBuf, InCfg>>::from(&secrets, host_dir.clone(), host_recip)
+    pub fn create(secrets: &'a SecretSet, host_dir: PathBuf, host_recip: &'a str) -> Self {
+        let instore = SecMap::<SecPBWith<InStore>>::create(secrets);
+        let map = SecMap::<SecPBWith<InCfg>>::create(&secrets, host_dir.clone(), host_recip)
             .inner()
             .into_iter()
             .map(|(k, v)| {
@@ -237,10 +251,10 @@ impl<'a> SecMap<'a, UniPath> {
     }
 }
 
-impl<'a> SecMap<'a, SecPath<PathBuf, InCfg>> {
-    fn from(value: &'a SecretSet, host_dir: PathBuf, host_recip_str: &str) -> Self {
-        let b = SecMap::<SecPath<PathBuf, InStore>>::from(value);
-        let res = b
+impl<'a> SecMap<'a, SecPBWith<InCfg>> {
+    fn create(src: &'a SecretSet, host_dir: PathBuf, host_recip_str: &str) -> Self {
+        let instore = SecMap::<SecPBWith<InStore>>::create(src);
+        instore
             .inner()
             .into_iter()
             .map(|(k, v)| {
@@ -249,7 +263,7 @@ impl<'a> SecMap<'a, SecPath<PathBuf, InCfg>> {
                 renc_path.push(enc_hash.to_string());
                 (k, SecPath::<_, InCfg>::new(renc_path))
             })
-            .collect::<HashMap<&profile::Secret, SecPath<_, InCfg>>>();
-        SecMap(res)
+            .collect::<HashMap<&profile::Secret, SecPBWith<InCfg>>>()
+            .into()
     }
 }
