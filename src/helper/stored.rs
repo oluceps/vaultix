@@ -83,7 +83,7 @@ macro_rules! impl_from_iterator_for_secmap {
     };
 }
 
-impl_from_iterator_for_secmap!(Vec<u8>, blake3::Hash);
+impl_from_iterator_for_secmap!(Vec<u8>, blake3::Hash, UniPath);
 
 #[derive(Debug, Clone)]
 pub struct SecMap<'a, P>(HashMap<&'a profile::Secret, P>);
@@ -91,6 +91,9 @@ pub struct SecMap<'a, P>(HashMap<&'a profile::Secret, P>);
 impl<'a, T> SecMap<'a, T> {
     pub fn inner(self) -> HashMap<&'a profile::Secret, T> {
         self.0
+    }
+    pub fn inner_ref(&self) -> &HashMap<&'a profile::Secret, T> {
+        &self.0
     }
 }
 impl<T> SecPath<PathBuf, T> {
@@ -164,20 +167,20 @@ pub struct Renc<'a> {
 
 impl<'a> Renc<'a> {
     pub fn new(secrets: &'a SecretSet, host_dir: PathBuf, host_recip: &'a str) -> Self {
-        let p2 = SecMap::<SecPath<PathBuf, InStore>>::from(secrets);
-        let p1 =
-            SecMap::<SecPath<PathBuf, InCfg>>::from(&secrets, host_dir.clone(), host_recip).inner();
-        let p2 = p2.inner();
+        let instore = SecMap::<SecPath<PathBuf, InStore>>::from(secrets);
+        let map = SecMap::<SecPath<PathBuf, InCfg>>::from(&secrets, host_dir.clone(), host_recip)
+            .inner()
+            .into_iter()
+            .map(|(k, v)| {
+                (
+                    k,
+                    UniPath::new(instore.inner_ref().get(k).expect("promise").clone(), v),
+                )
+            })
+            .collect::<SecMap<UniPath>>();
 
-        let mut merged_map = HashMap::new();
-
-        p1.into_iter().for_each(|(key, vout)| {
-            if let Some(vin) = p2.get(&key) {
-                merged_map.insert(key, UniPath::new(vin.clone(), vout));
-            }
-        });
         Renc {
-            map: SecMap(merged_map),
+            map,
             host_dir,
             host_recip,
         }
