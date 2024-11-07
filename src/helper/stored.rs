@@ -9,7 +9,7 @@ use std::{
 
 use age::{Identity, Recipient};
 use eyre::Context;
-use spdlog::trace;
+use spdlog::{debug, trace};
 
 use crate::{
     helper::secret_buf::{AgeEnc, SecBuf},
@@ -128,6 +128,14 @@ impl<'a, T> SecMap<'a, SecPath<PathBuf, T>> {
             .map(|(k, v)| v.read_buffer().and_then(|b| Ok((k, b))))
             .try_collect::<SecMap<Vec<u8>>>()
     }
+    fn have(&self, p: &PathBuf) -> bool {
+        for ip in self.inner_ref().values() {
+            if &ip.path == p {
+                return true;
+            }
+        }
+        false
+    }
 }
 
 impl<'a> SecMap<'a, SecPBWith<InStore>> {
@@ -182,7 +190,9 @@ pub struct Renc<'a> {
 impl<'a> Renc<'a> {
     pub fn create(secrets: &'a SecretSet, host_dir: PathBuf, host_recip: &'a str) -> Self {
         let instore = SecMap::<SecPBWith<InStore>>::create(secrets);
-        let map = SecMap::<SecPBWith<InCfg>>::create(&secrets, host_dir.clone(), host_recip)
+        let incfg = SecMap::<SecPBWith<InCfg>>::create(&secrets, host_dir.clone(), host_recip);
+        incfg.clean_old(host_dir.clone()).expect("success");
+        let map = incfg
             .inner()
             .into_iter()
             .map(|(k, v)| {
@@ -265,5 +275,23 @@ impl<'a> SecMap<'a, SecPBWith<InCfg>> {
             })
             .collect::<HashMap<&profile::Secret, SecPBWith<InCfg>>>()
             .into()
+    }
+
+    fn clean_old(&self, host_dir: PathBuf) -> Result<()> {
+        let tobe_clean = fs::read_dir(host_dir)?.filter_map(|entry| {
+            let entry = entry.ok()?;
+            let path = entry.path();
+            if path.is_file() && !self.have(&path) {
+                Some(path)
+            } else {
+                None
+            }
+        });
+
+        for p in tobe_clean {
+            debug!("cleaning old: {}", p.display());
+            fs::remove_file(p).with_context(|| eyre!("cleaning old renc file error"))?
+        }
+        Ok(())
     }
 }
