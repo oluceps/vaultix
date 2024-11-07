@@ -22,6 +22,9 @@ Highly inspired by agenix-rekey. Based on rust age crate.
 + `self` as specialArgs, to `nixosSystem`
 + `systemd.sysusers` or `services.userborn` option enabled
 
+> [!NOTE]
+> The `edit` subcommand is not implement yet, For adding new secrets, you could just simply use `rage` cli, with recipient of `settings.identity`.
+
 ### Configuration:
 
 Adding flake-parts flakeModule:
@@ -93,9 +96,6 @@ The wrapped vaultix will decrypt cipher content to plaintext and encrypt it with
 ```bash
 nix run .#vaultix.x86_64-linux.renc
 ```
-
-> [!NOTE]  
-> The `edit` subcommand is not implement yet, you could just simply use `rage` cli, with recipient of `settings.identity`.
 
 ## Cli Args
 
