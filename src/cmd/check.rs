@@ -18,8 +18,8 @@ impl Profile {
             .map(|p| {
                 debug!("checking in-store path: {}", p.path.display());
                 if !p.path.exists() {
-                    error!("path not found: {}\nTry run renc app", p.path.display());
-                    return Err(eyre::eyre!("rencypted secret not in expected location",));
+                    error!("path not found: {}\nPlease run renc.", p.path.display());
+                    return Err(eyre::eyre!("some secret haven't been re-encrypted",));
                 }
                 Ok(())
             })
