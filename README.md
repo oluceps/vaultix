@@ -8,22 +8,21 @@ Secret management for NixOS.
 
 Highly inspired by agenix-rekey. Based on rust age crate.
 
-> [!CAUTION]
-> This project is in VERY early dev stage, NOT ready for production.
-
 + AGE Support Only
 + PIV Card (Yubikey) Support
 + Age Plugin Compatible
 + No Bash
 
-## Prerequisite:
+## Setup
+
+### Prerequisite:
 
 + `nix-command` feature enabled
 + `flake-parts` structured config
 + `self` as specialArgs, to `nixosSystem`
 + `systemd.sysusers` or `services.userborn` option enabled
 
-## Setup
+### Configuration:
 
 Adding flake-parts flakeModule:
 
@@ -83,7 +82,7 @@ Adding nixosModule config:
 }
 ```
 
-Then run [renc](#renc) before deploy.
+Then run [renc](#nix-app-renc) before deploy.
 
 ## Nix App: renc
 
@@ -95,6 +94,8 @@ The wrapped vaultix will decrypt cipher content to plaintext and encrypt it with
 nix run .#vaultix.x86_64-linux.renc
 ```
 
+> [!NOTE]  
+> The `edit` subcommand is not implement yet, you could just simply use `rage` cli, with recipient of `settings.identity`.
 
 ## Cli Args
 
