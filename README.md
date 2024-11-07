@@ -83,9 +83,13 @@ Adding nixosModule config:
 }
 ```
 
-Then run renc before deploy.
+Then run [renc](#renc) before deploy.
 
-This step also needed every time the host key or secret content changed.
+## Nix App: renc
+
+This step is needed every time the host key or secret content changed.
+
+The wrapped vaultix will decrypt cipher content to plaintext and encrypt it with target host public key, finally stored in `storagelocation`.
 
 ```bash
 nix run .#vaultix.x86_64-linux.renc
