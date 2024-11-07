@@ -18,8 +18,10 @@ impl Profile {
             .map(|p| {
                 debug!("checking in-store path: {}", p.path.display());
                 if !p.path.exists() {
-                    error!("path not found: {}\nTry run renc app", p.path.display());
-                    return Err(eyre::eyre!("rencypted secret not in expected location",));
+                    error!("path not found: {}", p.path.display());
+                    error!("Please run renc");
+                    error!("See https://github.com/oluceps/vaultix/tree/main?tab=readme-ov-file#nix-app-renc");
+                    return Err(eyre::eyre!("some secrets haven't been re-encrypted",));
                 }
                 Ok(())
             })
