@@ -1,6 +1,5 @@
-- [ ] [gc] garbage collection
-- [ ] [edit] extra encrypt key
-- [ ] deploy to other directory
+- [ ] [edit] or [add] secret with extra encrypt key
+- [ ] deploy to specified location
 - [x] check command
 - [x] vaultix.d in ramfs
 - [x] vaultix{,.d} permission

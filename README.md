@@ -131,6 +131,10 @@ Commands:
   deploy            Decrypt and deploy cipher credentials
 ```
 
+## TODO
+
+See [TODO](./TODO.md)
+
 ## Credits
 
 + [agenix](https://github.com/ryantm/agenix)
