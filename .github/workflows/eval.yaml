@@ -1,0 +1,31 @@
+name: Evaluate
+on:
+  pull_request:
+    branches: ["*"]
+  push:
+    branches: ["main", "dev"]
+jobs:
+  check:
+    name: format check
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: "write"
+      contents: "read"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - uses: DeterminateSystems/flake-checker-action@main
+
+      - name: Build vaultix cli
+        run: |
+          nix build .
+
+      - name: Run cargo check
+        run: |
+          nix develop -c cargo check
+
+      - name: Run cargo test
+        run: |
+          nix develop -c cargo test
