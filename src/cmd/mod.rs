@@ -15,7 +15,7 @@ pub struct Args {
     #[argh(subcommand)]
     app: SubCmd,
     #[argh(positional)]
-    /// toml secret profile
+    /// secret profile
     profile: String,
     #[argh(option, short = 'f')]
     /// toplevel of flake repository
@@ -34,11 +34,7 @@ enum SubCmd {
 #[derive(FromArgs, PartialEq, Debug)]
 /// Re-encrypt changed files
 #[argh(subcommand, name = "renc")]
-pub struct RencSubCmd {
-    #[argh(switch, short = 'a')]
-    /// rekey all
-    all: bool,
-}
+pub struct RencSubCmd {}
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// Edit encrypted file
@@ -78,15 +74,17 @@ impl Args {
         trace!("{:#?}", profile);
 
         match self.app {
-            SubCmd::Renc(RencSubCmd { all }) => {
+            SubCmd::Renc(RencSubCmd {}) => {
                 debug!("start re-encrypt secrets");
-                profile.renc(all, flake_root)
+                profile.renc(flake_root)
             }
             SubCmd::Deploy(DeploySubCmd {}) => {
                 info!("deploying secrets");
                 profile.deploy()
             }
-            SubCmd::Edit(_) => todo!("you can directly use rage."),
+            SubCmd::Edit(_) => {
+                todo!("you can simply use rage cli, with recipient of `settings.identity`")
+            }
             SubCmd::Check(_) => {
                 info!("start checking");
                 profile.check()?;

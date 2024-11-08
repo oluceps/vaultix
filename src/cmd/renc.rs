@@ -20,7 +20,7 @@ impl Profile {
     encrypt with host public key, output to `./secrets/renced/$host`
     and add to nix store.
     */
-    pub fn renc(self, _all: bool, flake_root: PathBuf) -> Result<()> {
+    pub fn renc(self, flake_root: PathBuf) -> Result<()> {
         info!(
             "rencrypt for host [{}]",
             self.settings.host_identifier.clone()

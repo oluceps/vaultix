@@ -60,7 +60,7 @@ Adding nixosModule config:
         "./secret/renc/${config.networking.hostName}";
 
       # extraRecipients =
-      # not supported yet, plain to used in edit command
+      # not implement yet
       #  [ data.keys.ageKey ];
 
       identity =
@@ -118,7 +118,7 @@ Usage: vaultix <profile> [-f <flake-root>] <command> [<args>]
 Vaultix cli | Secret manager for NixOS
 
 Positional Arguments:
-  profile           toml secret profile
+  profile           secret profile
 
 Options:
   -f, --flake-root  toplevel of flake repository
