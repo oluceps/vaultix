@@ -1,4 +1,3 @@
-vaultixSelf:
 {
   config,
   options,
@@ -14,6 +13,7 @@ let
     isAttrs
     isPath
     readFile
+    literalMD
     literalExpression
     mkEnableOption
     mkIf
@@ -237,10 +237,7 @@ in
 {
   options.vaultix = {
 
-    package = mkOption {
-      type = types.package;
-      default = vaultixSelf.packages.${pkgs.system}.vaultix;
-    };
+    package = mkOption { defaultText = literalMD "`packages.vaultix` from this flake"; };
 
     settings = mkOption {
       type = settingsType;

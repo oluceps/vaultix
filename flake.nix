@@ -120,8 +120,14 @@
           overlays.default = final: prev: {
             vaultix = inputs.self.packages.${prev.system}.default;
           };
-          nixosModules.default = import ./module self;
-
+          nixosModules.default =
+            { pkgs, ... }:
+            {
+              imports = [ ./module ];
+              vaultix.package = withSystem pkgs.stdenv.hostPlatform.system (
+                { config, ... }: config.packages.vaultix
+              );
+            };
         };
       }
     );
