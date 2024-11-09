@@ -1,8 +1,7 @@
 # Vaultix
 
 ![built for nixos](https://img.shields.io/static/v1?logo=nixos&logoColor=white&label=&message=Built%20for%20NixOS&color=41439a)
-![CI state](https://github.com/oluceps/vaultix/actions/workflows/lint.yaml/badge.svg)
-[![built with garnix](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fgarnix.io%2Fapi%2Fbadges%2Foluceps%2Fvaultix)](https://garnix.io)
+![CI state](https://github.com/oluceps/vaultix/actions/workflows/eval.yaml/badge.svg)
 
 Secret management for NixOS.
 
