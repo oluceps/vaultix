@@ -226,14 +226,14 @@ impl Profile {
             info!("start deploy templates");
             use sha2::{Digest, Sha256};
 
-            let get_hashed_id = |s: &profile::Secret| -> String {
+            let get_hashed_id = |s: &profile::Secret| -> Vec<u8> {
                 let mut hasher = Sha256::new();
                 hasher.update(s.id.as_str());
-                format!("{:X}", hasher.finalize()).to_lowercase()
+                hasher.finalize().to_vec()
             };
 
             // new map with sha256 hashed secret id str as key, ctx as value
-            let hashstr_ctx_map: HashMap<String, &Vec<u8>> = plain_map
+            let hashstr_ctx_map: HashMap<Vec<u8>, &Vec<u8>> = plain_map
                 .inner_ref()
                 .iter()
                 .map(|(k, v)| (get_hashed_id(*k), v))
@@ -245,12 +245,12 @@ impl Profile {
 
                 hashstr_ctx_map
                     .iter()
-                    .filter(|(k, _)| hashstrs_of_it.contains(*k))
+                    .filter(|(k, _)| hashstrs_of_it.contains(k))
                     .for_each(|(k, v)| {
                         // render
                         trace!("template before process: {}", template);
                         template = template.replace(
-                            format!("{{{{ {} }}}}", k).as_str(),
+                            format!("{{{{ {} }}}}", hex::encode(k.as_slice())).as_str(),
                             String::from_utf8_lossy(v).to_string().as_str(),
                         );
                         trace!("processed template: {}", template);

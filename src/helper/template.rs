@@ -31,13 +31,17 @@ fn pars<'a>(text: &'a str, res: &mut Vec<&'a str>) {
 }
 
 impl Template {
-    pub fn parse_hash_str_list(&self) -> Result<Vec<String>> {
+    pub fn parse_hash_str_list(&self) -> Result<Vec<Vec<u8>>> {
+        use hex::decode;
         let text = &self.content;
 
         let mut res = vec![];
         let text = format!(" {}", text); // hack
         pars(text.as_str(), &mut res);
-        Ok(res.into_iter().map(|s| String::from(s)).collect())
+        Ok(res
+            .into_iter()
+            .map(|s| decode(s).expect("hex decode"))
+            .collect())
     }
 }
 
@@ -46,6 +50,8 @@ impl Template {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use hex_literal::hex;
+    use nom::AsBytes;
 
     impl Default for Template {
         fn default() -> Self {
@@ -72,8 +78,8 @@ mod tests {
             ..Template::default()
         };
         assert_eq!(
-            vec!["dcd789434d890685da841b8db8a02b0173b90eac3774109ba9bca1b81440aa93"],
-            t.parse_hash_str_list().unwrap()
+            hex!("dcd789434d890685da841b8db8a02b0173b90eac3774109ba9bca1b81440aa93"),
+            t.parse_hash_str_list().unwrap().get(0).unwrap().as_bytes()
         )
     }
     #[test]
@@ -84,12 +90,14 @@ mod tests {
             content: String::from(str),
             ..Template::default()
         };
+        let l = t.parse_hash_str_list().unwrap();
         assert_eq!(
-            vec![
-                "dcd789434d890685da841b8db8a02b0173b90eac3774109ba9bca1b81440aa93",
-                "cd789434d890685da841b8db8a02b0173b90eac3774109ba9bca1b81440a2a93"
-            ],
-            t.parse_hash_str_list().unwrap()
+            hex!("dcd789434d890685da841b8db8a02b0173b90eac3774109ba9bca1b81440aa93"),
+            l.get(0).unwrap().as_slice()
+        );
+        assert_eq!(
+            hex!("cd789434d890685da841b8db8a02b0173b90eac3774109ba9bca1b81440a2a93"),
+            l.get(1).unwrap().as_slice()
         )
     }
     #[test]
@@ -100,9 +108,10 @@ mod tests {
             content: String::from(str),
             ..Template::default()
         };
+        let l = t.parse_hash_str_list().unwrap();
         assert_eq!(
-            vec!["cd789434d890685da841b8db8a02b0173b90eac3774109ba9bca1b81440a2a93",],
-            t.parse_hash_str_list().unwrap()
+            hex!("cd789434d890685da841b8db8a02b0173b90eac3774109ba9bca1b81440a2a93"),
+            l.get(0).unwrap().as_slice()
         )
     }
     #[test]
@@ -113,9 +122,10 @@ mod tests {
             content: String::from(str),
             ..Template::default()
         };
+        let l = t.parse_hash_str_list().unwrap();
         assert_eq!(
-            vec!["cd789434d890685da841b8db8a02b0173b90eac3774109ba9bca1b81440a2a93",],
-            t.parse_hash_str_list().unwrap()
+            hex!("cd789434d890685da841b8db8a02b0173b90eac3774109ba9bca1b81440a2a93"),
+            l.get(0).unwrap().as_slice()
         )
     }
     #[test]
