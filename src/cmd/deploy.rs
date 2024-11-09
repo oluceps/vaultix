@@ -240,11 +240,7 @@ impl Profile {
                 .collect();
 
             self.templates.clone().iter().for_each(|(_, t)| {
-                // TODO:
-                // parse content -> [hash]
-
-                let mut raw_template = t.content.clone();
-
+                let mut template = t.content.clone();
                 let hashstrs_of_it = t.parse_hash_str_list().expect("parse template");
 
                 hashstr_ctx_map
@@ -252,16 +248,16 @@ impl Profile {
                     .filter(|(k, _)| hashstrs_of_it.contains(*k))
                     .for_each(|(k, v)| {
                         // render
-                        trace!("template before process: {}", raw_template);
-                        raw_template = raw_template.replace(
+                        trace!("template before process: {}", template);
+                        template = template.replace(
                             format!("{{{{ {} }}}}", k).as_str(),
                             String::from_utf8_lossy(v).to_string().as_str(),
                         );
-                        trace!("processed template: {}", raw_template);
+                        trace!("processed template: {}", template);
                     });
 
                 deploy_to_fs(
-                    SecBuf::<Plain>::new(raw_template.into_bytes()),
+                    SecBuf::<Plain>::new(template.into_bytes()),
                     t,
                     generation_count,
                     target_extract_dir_with_gen.clone(),
