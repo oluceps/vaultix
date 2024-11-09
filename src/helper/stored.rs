@@ -18,6 +18,8 @@ use crate::{
 use eyre::{eyre, Result};
 use std::marker::PhantomData;
 
+use super::secret_buf::HostEnc;
+
 #[derive(Debug, Clone)]
 pub struct SecPath<P: AsRef<Path>, T> {
     pub path: P,
@@ -91,7 +93,7 @@ macro_rules! impl_from_iterator_for_secmap {
         )*
     };
 }
-impl_from_iterator_for_secmap!(Vec<u8>, blake3::Hash, UniPath);
+impl_from_iterator_for_secmap!(Vec<u8>, blake3::Hash, UniPath, SecBuf<HostEnc>);
 
 macro_rules! impl_into_secmap_for_themap {
     ($($t:ty),*) => {
@@ -121,13 +123,6 @@ impl<'a, T> SecMap<'a, T> {
 }
 
 impl<'a, T> SecMap<'a, SecPath<PathBuf, T>> {
-    /// read secret file
-    pub fn bake_ctx(self) -> Result<SecMap<'a, Vec<u8>>> {
-        self.inner()
-            .into_iter()
-            .map(|(k, v)| v.read_buffer().and_then(|b| Ok((k, b))))
-            .try_collect::<SecMap<Vec<u8>>>()
-    }
     fn have(&self, p: &PathBuf) -> bool {
         for ip in self.inner_ref().values() {
             if &ip.path == p {
@@ -166,6 +161,14 @@ impl<'a> SecMap<'a, SecPBWith<InStore>> {
             })
             .collect::<HashMap<&profile::Secret, SecPBWith<InStore>>>()
             .into()
+    }
+
+    /// read secret file
+    pub fn bake_ctx(self) -> Result<SecMap<'a, SecBuf<HostEnc>>> {
+        self.inner()
+            .into_iter()
+            .map(|(k, v)| v.read_buffer().and_then(|b| Ok((k, SecBuf::from(b)))))
+            .try_collect::<SecMap<SecBuf<HostEnc>>>()
     }
 }
 

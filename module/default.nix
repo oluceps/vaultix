@@ -227,14 +227,15 @@ let
           Group of the decrypted secret.
         '';
       };
-      symlink = mkEnableOption "symlinking secrets to their destination" // {
+      symlink = mkEnableOption "symlinking secrets to destination" // {
         default = true;
       };
     };
   });
-
 in
 {
+  imports = [ ./template.nix ];
+
   options.vaultix = {
 
     package = mkOption { defaultText = literalMD "`packages.vaultix` from this flake"; };
@@ -254,7 +255,11 @@ in
         Attrset of secrets.
       '';
     };
+  };
 
+  options.vaultix-debug = mkOption {
+    type = types.unspecified;
+    default = cfg;
   };
 
   config =

@@ -1,4 +1,4 @@
-- [ ] template
+- [x] template
 - [ ] [edit] or [add] secret with extra encrypt key
 - [ ] deploy to specified location
 - [x] check command
