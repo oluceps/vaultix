@@ -11,6 +11,7 @@ pub struct HostEnc;
 #[derive(Debug, Clone)]
 pub struct Plain;
 
+#[derive(Debug, Clone)]
 pub struct SecBuf<T> {
     buf: Vec<u8>,
     _marker: PhantomData<T>,
@@ -22,6 +23,9 @@ impl<T> SecBuf<T> {
             buf: i,
             _marker: PhantomData,
         }
+    }
+    pub fn inner(self) -> Vec<u8> {
+        self.buf
     }
 }
 
@@ -41,6 +45,15 @@ impl<T> SecBuf<T> {
             debug!("decrypted secret {} bytes", b);
         }
         Ok(SecBuf::new(dec_ctx))
+    }
+}
+
+impl<T> From<Vec<u8>> for SecBuf<T> {
+    fn from(value: Vec<u8>) -> Self {
+        Self {
+            buf: value,
+            _marker: PhantomData,
+        }
     }
 }
 

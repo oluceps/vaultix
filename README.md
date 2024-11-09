@@ -5,11 +5,12 @@
 
 Secret management for NixOS.
 
-Highly inspired by agenix-rekey. Based on rust age crate.
+Highly inspired by agenix-rekey and sops-nix. Based on rust age crate.
 
-+ AGE Support Only
-+ PIV Card (Yubikey) Support
 + Age Plugin Compatible
++ Support identity with passphase
++ Support PIV Card (Yubikey)
++ Support Template
 + No Bash
 
 ## Setup

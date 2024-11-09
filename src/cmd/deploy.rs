@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fs::{self, OpenOptions, Permissions, ReadDir},
     io::{ErrorKind, Write},
     os::unix::fs::PermissionsExt,
@@ -10,10 +11,10 @@ use std::{
 use crate::{
     helper::{
         self,
-        secret_buf::{HostEnc, SecBuf},
+        secret_buf::{Plain, SecBuf},
         stored::{InStore, SecMap, SecPath},
     },
-    profile::{HostKey, Profile},
+    profile::{self, HostKey, Profile},
 };
 
 use age::{ssh, x25519, Recipient};
@@ -33,6 +34,34 @@ impl HostKey {
 }
 
 const KEY_TYPE: &str = "ed25519";
+
+fn deploy_to_fs(
+    ctx: SecBuf<Plain>,
+    item: impl crate::profile::DeployFactor,
+    generation_count: usize,
+    target_dir_ordered: PathBuf,
+) -> Result<()> {
+    info!("{} -> generation {}", item.get_name(), generation_count);
+    let mut the_file = {
+        let mut p = target_dir_ordered.clone();
+        p.push(item.get_name().clone());
+
+        let mode = helper::parse_permission::parse_octal_string(item.get_mode())
+            .map_err(|e| eyre!("parse octal permission err: {}", e))?;
+        let permissions = Permissions::from_mode(mode);
+
+        let file = OpenOptions::new().create(true).write(true).open(p)?;
+
+        file.set_permissions(permissions)?;
+
+        helper::set_owner_group::set_owner_and_group(&file, item.get_owner(), item.get_group())?;
+
+        file
+    };
+    the_file.write_all(ctx.buf_ref())?;
+    Ok(())
+}
+
 impl Profile {
     pub fn get_decrypted_mount_point_path(&self) -> String {
         self.settings.decrypted_mount_point.to_string()
@@ -149,15 +178,17 @@ impl Profile {
     extract secrets to `/run/vaultix.d/$num` and link to `/run/vaultix`
     */
     pub fn deploy(self) -> Result<()> {
-        let sec_instore_map = SecMap::<SecPath<_, InStore>>::create(&self.secrets)
+        let host_prv_key = &self.get_host_key_identity()?;
+        let plain_map: SecMap<Vec<u8>> = SecMap::<SecPath<_, InStore>>::create(&self.secrets)
             .renced_stored(
                 self.settings.storage_in_store.clone().into(),
                 self.settings.host_pubkey.as_str(),
             )
             .bake_ctx()?
-            .inner();
-
-        trace!("{:?}", sec_instore_map);
+            .inner()
+            .into_iter()
+            .map(|(s, c)| (s, c.decrypt(host_prv_key).expect("err").inner()))
+            .collect();
 
         let generation_count = self.init_decrypted_mount_point()?;
 
@@ -179,36 +210,66 @@ impl Profile {
                 })?
         };
 
-        let host_prv_key = &self.get_host_key_identity()?;
-
-        sec_instore_map.into_iter().for_each(|(n, c)| {
-            let ctx = SecBuf::<HostEnc>::new(c)
-                .decrypt(host_prv_key)
-                .expect("err");
-
-            info!("{} -> generation {}", n.name, generation_count);
-            let mut the_file = {
-                let mut p = target_extract_dir_with_gen.clone();
-                p.push(n.name.clone());
-
-                let mode = helper::parse_permission::parse_octal_string(&n.mode).unwrap();
-                let permissions = Permissions::from_mode(mode);
-
-                let file = OpenOptions::new().create(true).write(true).open(p).unwrap();
-
-                file.set_permissions(permissions).unwrap();
-
-                helper::set_owner_group::set_owner_and_group(&file, &n.owner, &n.group)
-                    .expect("good report");
-
-                file
-            };
-            the_file
-                .write_all(ctx.buf_ref())
-                .expect("write decrypted file error")
+        // deploy general secrets
+        plain_map.inner_ref().iter().for_each(|(n, c)| {
+            let ctx = SecBuf::<Plain>::new(c.clone());
+            deploy_to_fs(
+                ctx,
+                *n,
+                generation_count,
+                target_extract_dir_with_gen.clone(),
+            )
+            .expect("err");
         });
 
-        let _ = fs::remove_file(self.get_decrypt_dir_path());
+        if self.templates.len() != 0 {
+            info!("start deploy templates");
+            use sha2::{Digest, Sha256};
+
+            let get_hashed_id = |s: &profile::Secret| -> String {
+                let mut hasher = Sha256::new();
+                hasher.update(s.id.as_str());
+                format!("{:X}", hasher.finalize()).to_lowercase()
+            };
+
+            // new map with sha256 hashed secret id str as key, ctx as value
+            let hashstr_ctx_map: HashMap<String, &Vec<u8>> = plain_map
+                .inner_ref()
+                .iter()
+                .map(|(k, v)| (get_hashed_id(*k), v))
+                .collect();
+
+            self.templates.clone().iter().for_each(|(_, t)| {
+                // TODO:
+                // parse content -> [hash]
+
+                let mut raw_template = t.content.clone();
+
+                let hashstrs_of_it = t.parse_hash_str_list().expect("parse template");
+
+                hashstr_ctx_map
+                    .iter()
+                    .filter(|(k, _)| hashstrs_of_it.contains(*k))
+                    .for_each(|(k, v)| {
+                        // render
+                        trace!("template before process: {}", raw_template);
+                        raw_template = raw_template.replace(
+                            format!("{{{{ {} }}}}", k).as_str(),
+                            String::from_utf8_lossy(v).to_string().as_str(),
+                        );
+                        trace!("processed template: {}", raw_template);
+                    });
+
+                deploy_to_fs(
+                    SecBuf::<Plain>::new(raw_template.into_bytes()),
+                    t,
+                    generation_count,
+                    target_extract_dir_with_gen.clone(),
+                )
+                .expect("extract template to target generation")
+            });
+        }
+
         // link back to /run/vaultix
         if std::os::unix::fs::symlink(target_extract_dir_with_gen, self.get_decrypt_dir_path())
             .wrap_err("create symlink error")
