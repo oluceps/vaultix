@@ -8,9 +8,9 @@ Secret management for NixOS.
 Highly inspired by agenix-rekey and sops-nix. Based on rust age crate.
 
 + Age Plugin Compatible
++ Support Template
 + Support identity with passphase
 + Support PIV Card (Yubikey)
-+ Support Template
 + No Bash
 
 ## Setup
@@ -81,14 +81,24 @@ Adding nixosModule config:
         # path = "/some/place";
       };
     };
+
+    # the templating function acts the same as sops-nix
+    templates = {
+      test = {
+        name = "template.txt";
+        # to be notice that the source secret file may have trailing `\n`
+        content = "this is a template for testing ${config.vaultix.placeholder.example}";
+      };
+    }
   };
 }
 ```
 
-After this you could reference the decrypted secret path by:
+After this you could reference the path by:
 
 ```
-<AnyPathOption> = config.vaultix.secrets.example.path;
+<A-PathOption> = config.vaultix.secrets.example.path;
+<B-PathOption> = config.vaultix.templates.test.path;
 # ...
 ```
 
@@ -139,3 +149,4 @@ See [TODO](./TODO.md)
 
 + [agenix](https://github.com/ryantm/agenix)
 + [agenix-rekey](https://github.com/oddlama/agenix-rekey)
++ [sops-nix](https://github.com/Mic92/sops-nix)
