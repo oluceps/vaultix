@@ -24,7 +24,7 @@ pub struct Secret {
     pub symlink: bool,
 }
 
-#[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq)]
+#[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq, Default)]
 pub struct Template {
     pub name: String,
     pub content: String,

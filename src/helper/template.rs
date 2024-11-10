@@ -53,21 +53,6 @@ mod tests {
     use hex_literal::hex;
     use nom::AsBytes;
 
-    impl Default for Template {
-        fn default() -> Self {
-            let string_default = String::default();
-            Template {
-                name: string_default.clone(),
-                content: string_default.clone(),
-                group: string_default.clone(),
-                mode: string_default.clone(),
-                owner: string_default.clone(),
-                path: string_default,
-                symlink: true,
-            }
-        }
-    }
-
     #[test]
     fn parse_template_single() {
         let str =
@@ -142,6 +127,47 @@ mod tests {
     fn parse_template_multi_line_truncate() {
         let str = r#"some {{ d9cd8155764c3543f10fad8a480d743137466f8d55213c8eaefcd12f06d43a80
         }}"#;
+
+        let t = Template {
+            content: String::from(str),
+            ..Template::default()
+        };
+        assert!(t.parse_hash_str_list().unwrap().len() == 0)
+    }
+    #[test]
+    fn parse_template_multi_line_truncate_type1() {
+        let str = r#"some {{ d9cd8155764c3543f10fad8a480d743137466f8d55213c8eaefcd12f06d43a80 }
+        }"#;
+
+        let t = Template {
+            content: String::from(str),
+            ..Template::default()
+        };
+        assert!(t.parse_hash_str_list().unwrap().len() == 0)
+    }
+    #[test]
+    fn parse_template_pad() {
+        let str = r#"some {{ d9cd8155764c3543f10fad8a480d743137466f8d55 13c8eaefcd12f06d43a80 }}"#;
+
+        let t = Template {
+            content: String::from(str),
+            ..Template::default()
+        };
+        assert!(t.parse_hash_str_list().unwrap().len() == 0)
+    }
+    #[test]
+    fn parse_template_char_not_hex() {
+        let str = r#"some {{ d9cd8155764c3543f10fad8a480d743137466f8d55l13c8eaefcd12f06d43a80 }}"#;
+
+        let t = Template {
+            content: String::from(str),
+            ..Template::default()
+        };
+        assert!(t.parse_hash_str_list().unwrap().len() == 0)
+    }
+    #[test]
+    fn parse_template_no_hash() {
+        let str = r#"some {{ }}"#;
 
         let t = Template {
             content: String::from(str),
