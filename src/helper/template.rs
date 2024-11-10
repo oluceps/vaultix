@@ -17,12 +17,13 @@ fn parse_braced_hash(input: &str) -> IResult<&str, &str, Error<&str>> {
 }
 
 pub fn extract_all_hashes<'a>(input: &'a str, res: &mut Vec<&'a str>) {
+    if input.len() < 66 {
+        // less than expected `{{ hash }}` length
+        return;
+    }
     if let Ok((o, b)) = verify(parse_braced_hash, |_: &str| true)(input) {
         res.push(b);
         extract_all_hashes(o, res)
-    } else if input.len() < 66 {
-        // less than expected `{{ hash }}` length
-        return;
     } else {
         let this = {
             // handle multibytes
@@ -255,6 +256,14 @@ mod tests {
 
         let t = Template {
             content: String::from(str),
+            ..Template::default()
+        };
+        t.parse_hash_str_list().unwrap();
+    }
+    #[test]
+    fn parse_template_empty() {
+        let t = Template {
+            content: String::default(),
             ..Template::default()
         };
         t.parse_hash_str_list().unwrap();
