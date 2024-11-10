@@ -1,0 +1,15 @@
+name: Fuzzy test
+on:
+  pull_request:
+    branches: ["*"]
+
+jobs:
+  clippy_check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test
+        run: |
+          rustup default nightly
+          cargo install cargo-fuzz
+          cargo fuzz run --all-features fuzz_target_1 -- -max_len=256 -runs=16777216
