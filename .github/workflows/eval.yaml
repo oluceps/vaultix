@@ -2,12 +2,14 @@ name: Evaluate
 on:
   pull_request:
     branches: ["*"]
-    paths-ignore: &ign
+    paths-ignore:
       - 'docs/**'
       - '**/*.md'
   push:
     branches: ["main", "dev"]
-    paths-ignore: *ign
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
 
 jobs:
   check:
