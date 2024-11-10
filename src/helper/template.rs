@@ -41,7 +41,6 @@ impl Template {
         let text = &self.content;
 
         let mut res = vec![];
-        let text = format!(" {}", text); // hack
         extract_all_hashes(text.as_str(), &mut res);
         Ok(res
             .into_iter()
