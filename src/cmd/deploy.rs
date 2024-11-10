@@ -247,15 +247,26 @@ impl Profile {
                 let mut template = t.content.clone();
                 let hashstrs_of_it = t.parse_hash_str_list().expect("parse template");
 
+                let trim_the_insertial = t.trim;
+
                 hashstr_ctx_map
                     .iter()
                     .filter(|(k, _)| hashstrs_of_it.contains(k))
                     .for_each(|(k, v)| {
-                        // render
+                        // render and insert
                         trace!("template before process: {}", template);
+
+                        let raw_composed_insertial = String::from_utf8_lossy(v).to_string();
+
+                        let insertial = if trim_the_insertial {
+                            raw_composed_insertial.trim()
+                        } else {
+                            raw_composed_insertial.as_str()
+                        };
+
                         template = template.replace(
                             format!("{{{{ {} }}}}", hex::encode(k.as_slice())).as_str(),
-                            String::from_utf8_lossy(v).to_string().as_str(),
+                            insertial,
                         );
                     });
 

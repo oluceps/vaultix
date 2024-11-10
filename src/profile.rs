@@ -28,6 +28,7 @@ pub struct Secret {
 pub struct Template {
     pub name: String,
     pub content: String,
+    pub trim: bool,
     pub group: String,
     pub mode: String,
     pub owner: String,
