@@ -50,7 +50,7 @@
             ...
           }:
           let
-            toolchain = pkgs.rust-bin.nightly.latest.minimal;
+            toolchain = pkgs.rust-bin.beta.latest.minimal;
             craneLib = (crane.mkLib pkgs).overrideToolchain toolchain;
             inherit (craneLib) buildPackage;
           in
@@ -95,7 +95,7 @@
 
               # see https://discourse.nixos.org/t/rust-src-not-found-and-other-misadventures-of-developing-rust-on-nixos/11570/12
               RUST_SRC_PATH = "${
-                pkgs.rust-bin.nightly.latest.default.override {
+                pkgs.rust-bin.beta.latest.default.override {
                   extensions = [ "rust-src" ];
                 }
               }/lib/rustlib/src/rust/library";
@@ -103,7 +103,7 @@
                 just
                 nushell
                 cargo-fuzz
-                rust-bin.nightly.latest.complete
+                rust-bin.beta.latest.complete
               ];
             };
 
