@@ -1,0 +1,23 @@
+[package]
+name = "vaultix-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+arbitrary = { version = "1", features = ["derive"] }
+libfuzzer-sys = "0.4.8"
+
+
+[dependencies.vaultix]
+path = ".."
+
+[[bin]]
+name = "fuzz_target_1"
+path = "fuzz_targets/fuzz_parser_1.rs"
+test = false
+doc = false
+bench = false

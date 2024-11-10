@@ -3,6 +3,10 @@ name = "vaultix"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "lib"
+path = "src/lib.rs"
+
 [dependencies]
 age = { git = "https://github.com/str4d/rage.git",rev = "baf277a749c839e49f93bffb58d36734ac94be83", features = ["ssh", "plugin"]}
 argh = "0.1.12"
