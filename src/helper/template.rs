@@ -16,17 +16,16 @@ fn parse_braced_hash(input: &str) -> IResult<&str, &str, Error<&str>> {
 }
 
 fn pars<'a>(text: &'a str, res: &mut Vec<&'a str>) {
-    let (remaining, _) = is_not::<&str, &str, Error<&str>>("{{")(text).expect("here");
-    match parse_braced_hash(remaining) {
-        Ok((remain, hashes)) => {
-            res.push(hashes);
-            if !remain.is_empty() {
-                pars(remain, res);
+    if let Ok((brace_start_then, _)) = is_not::<&str, &str, Error<&str>>("{")(text) {
+        match parse_braced_hash(brace_start_then) {
+            Ok((remain, hashes)) => {
+                res.push(hashes);
+                if !remain.is_empty() {
+                    pars(remain, res);
+                }
             }
-        }
-        Err(_e) => {
-            // warn!("parse template terminate: {:?}", e);
-        }
+            Err(_) => {}
+        };
     };
 }
 
@@ -124,6 +123,16 @@ mod tests {
         assert!(t.parse_hash_str_list().unwrap().len() == 0)
     }
     #[test]
+    fn parse_template_brace() {
+        let str = "{";
+
+        let t = Template {
+            content: String::from(str),
+            ..Template::default()
+        };
+        assert!(t.parse_hash_str_list().unwrap().len() == 0)
+    }
+    #[test]
     fn parse_template_multi_line_truncate() {
         let str = r#"some {{ d9cd8155764c3543f10fad8a480d743137466f8d55213c8eaefcd12f06d43a80
         }}"#;
@@ -204,6 +213,16 @@ mod tests {
             ..Template::default()
         };
         assert!(t.parse_hash_str_list().unwrap().len() == 0)
+    }
+    #[test]
+    fn parse_template_fuzz_crash_1() {
+        let str = r#"{{ EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE9EEEEEEEEEEEEEEEEEE1A }}{"#;
+
+        let t = Template {
+            content: String::from(str),
+            ..Template::default()
+        };
+        t.parse_hash_str_list().unwrap();
     }
     #[test]
     fn render() {

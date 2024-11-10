@@ -102,7 +102,8 @@
               buildInputs = with pkgs; [
                 just
                 nushell
-                rust-bin.beta.latest.complete
+                cargo-fuzz
+                rust-bin.nightly.latest.complete
               ];
             };
 
