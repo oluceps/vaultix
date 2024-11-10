@@ -24,7 +24,13 @@ pub fn extract_all_hashes<'a>(input: &'a str, res: &mut Vec<&'a str>) {
         // less than expected `{{ hash }}` length
         return;
     } else {
-        let this = &input[1..];
+        let this = {
+            // handle multibytes
+            let res = input.char_indices().nth(1).map_or("", |(i, _)| &input[i..]);
+            // skip to next `{`
+            res.find('{').map_or("", |index| &res[index..])
+        };
+
         extract_all_hashes(this, res)
     }
 }
