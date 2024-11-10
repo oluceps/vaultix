@@ -73,9 +73,9 @@ pub fn read_secret(
             .with_prompt(prompt)
             .with_timeout(30);
         if let Some(confirm_prompt) = confirm {
-            input.with_confirmation(confirm_prompt, &mismatch_error);
+            input.with_confirmation(confirm_prompt, mismatch_error);
         } else {
-            input.required(&empty_error);
+            input.required(empty_error);
         }
         input.interact()
     } else {

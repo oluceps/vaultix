@@ -27,7 +27,7 @@ impl Profile {
         );
 
         // check if flake root
-        if !fs::read_dir(&flake_root)?.into_iter().any(|e| {
+        if !fs::read_dir(&flake_root)?.any(|e| {
             e.is_ok_and(|ie| {
                 ie.file_name()
                     .into_string()
@@ -44,7 +44,8 @@ impl Profile {
         let renc_path = {
             let mut p = flake_root.clone();
             p.push(self.settings.storage_location.clone());
-            if let Err(_) = p.canonicalize() {
+            // pretend err is not found
+            if p.canonicalize().is_err() {
                 fs::create_dir_all(&p).wrap_err_with(|| eyre!("create storageLocation error"))?
             };
             p.canonicalize()?;
@@ -67,7 +68,7 @@ impl Profile {
         let key = key_pair.get_identity();
 
         let recip = self.get_host_recip()?;
-        if let Err(e) = data.map.makeup(vec![recip], &**key) {
+        if let Err(e) = data.map.makeup(vec![recip], key) {
             return Err(eyre!("makeup error: {}", e));
         } else {
             let o = add_to_store(renc_path)?;

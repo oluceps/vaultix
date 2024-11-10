@@ -31,7 +31,7 @@ impl<T> SecBuf<T> {
 
 use eyre::Result;
 impl<T> SecBuf<T> {
-    pub fn buf_ref<'a>(&'a self) -> &'a Vec<u8> {
+    pub fn buf_ref(&self) -> &Vec<u8> {
         self.buf.as_ref()
     }
     pub fn decrypt(&self, ident: &dyn Identity) -> Result<SecBuf<Plain>> {
@@ -115,7 +115,7 @@ mod tests {
         let _ = buf
             .renc(
                 &key as &dyn Identity,
-                Rc::new(age::x25519::Recipient::from_str(&new_recip_str).unwrap())
+                Rc::new(age::x25519::Recipient::from_str(new_recip_str).unwrap())
                     as Rc<dyn Recipient>,
             )
             .unwrap();

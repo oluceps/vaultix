@@ -16,17 +16,13 @@ fn parse_braced_hash(input: &str) -> IResult<&str, &str, Error<&str>> {
 }
 
 fn pars<'a>(text: &'a str, res: &mut Vec<&'a str>) {
-    let (remaining, _) = is_not::<&str, &str, Error<&str>>("{{")(text).expect("here");
-    match parse_braced_hash(remaining) {
-        Ok((remain, hashes)) => {
+    if let Ok((brace_start_then, _)) = is_not::<&str, &str, Error<&str>>("{")(text) {
+        if let Ok((remain, hashes)) = parse_braced_hash(brace_start_then) {
             res.push(hashes);
             if !remain.is_empty() {
                 pars(remain, res);
             }
-        }
-        Err(_e) => {
-            // warn!("parse template terminate: {:?}", e);
-        }
+        };
     };
 }
 
@@ -64,7 +60,7 @@ mod tests {
         };
         assert_eq!(
             hex!("dcd789434d890685da841b8db8a02b0173b90eac3774109ba9bca1b81440aa93"),
-            t.parse_hash_str_list().unwrap().get(0).unwrap().as_bytes()
+            t.parse_hash_str_list().unwrap().first().unwrap().as_bytes()
         )
     }
     #[test]
@@ -78,7 +74,7 @@ mod tests {
         let l = t.parse_hash_str_list().unwrap();
         assert_eq!(
             hex!("dcd789434d890685da841b8db8a02b0173b90eac3774109ba9bca1b81440aa93"),
-            l.get(0).unwrap().as_slice()
+            l.first().unwrap().as_slice()
         );
         assert_eq!(
             hex!("cd789434d890685da841b8db8a02b0173b90eac3774109ba9bca1b81440a2a93"),
@@ -96,7 +92,7 @@ mod tests {
         let l = t.parse_hash_str_list().unwrap();
         assert_eq!(
             hex!("cd789434d890685da841b8db8a02b0173b90eac3774109ba9bca1b81440a2a93"),
-            l.get(0).unwrap().as_slice()
+            l.first().unwrap().as_slice()
         )
     }
     #[test]
@@ -110,7 +106,7 @@ mod tests {
         let l = t.parse_hash_str_list().unwrap();
         assert_eq!(
             hex!("cd789434d890685da841b8db8a02b0173b90eac3774109ba9bca1b81440a2a93"),
-            l.get(0).unwrap().as_slice()
+            l.first().unwrap().as_slice()
         )
     }
     #[test]
@@ -121,7 +117,17 @@ mod tests {
             content: String::from(str),
             ..Template::default()
         };
-        assert!(t.parse_hash_str_list().unwrap().len() == 0)
+        assert!(t.parse_hash_str_list().unwrap().is_empty())
+    }
+    #[test]
+    fn parse_template_brace() {
+        let str = "{";
+
+        let t = Template {
+            content: String::from(str),
+            ..Template::default()
+        };
+        assert!(t.parse_hash_str_list().unwrap().is_empty())
     }
     #[test]
     fn parse_template_multi_line_truncate() {
@@ -132,7 +138,7 @@ mod tests {
             content: String::from(str),
             ..Template::default()
         };
-        assert!(t.parse_hash_str_list().unwrap().len() == 0)
+        assert!(t.parse_hash_str_list().unwrap().is_empty())
     }
     #[test]
     fn parse_template_multi_line_truncate_type1() {
@@ -143,7 +149,7 @@ mod tests {
             content: String::from(str),
             ..Template::default()
         };
-        assert!(t.parse_hash_str_list().unwrap().len() == 0)
+        assert!(t.parse_hash_str_list().unwrap().is_empty())
     }
     #[test]
     fn parse_template_pad() {
@@ -153,7 +159,7 @@ mod tests {
             content: String::from(str),
             ..Template::default()
         };
-        assert!(t.parse_hash_str_list().unwrap().len() == 0)
+        assert!(t.parse_hash_str_list().unwrap().is_empty())
     }
     #[test]
     fn parse_template_char_not_hex() {
@@ -163,7 +169,7 @@ mod tests {
             content: String::from(str),
             ..Template::default()
         };
-        assert!(t.parse_hash_str_list().unwrap().len() == 0)
+        assert!(t.parse_hash_str_list().unwrap().is_empty())
     }
     #[test]
     fn parse_template_no_hash() {
@@ -173,7 +179,7 @@ mod tests {
             content: String::from(str),
             ..Template::default()
         };
-        assert!(t.parse_hash_str_list().unwrap().len() == 0)
+        assert!(t.parse_hash_str_list().unwrap().is_empty())
     }
     #[test]
     fn parse_template_invalid_length_of_hash() {
@@ -183,7 +189,7 @@ mod tests {
             content: String::from(str),
             ..Template::default()
         };
-        assert!(t.parse_hash_str_list().unwrap().len() == 0)
+        assert!(t.parse_hash_str_list().unwrap().is_empty())
     }
     #[test]
     fn parse_template_open() {
@@ -193,7 +199,7 @@ mod tests {
             content: String::from(str),
             ..Template::default()
         };
-        assert!(t.parse_hash_str_list().unwrap().len() == 0)
+        assert!(t.parse_hash_str_list().unwrap().is_empty())
     }
     #[test]
     fn parse_template_whatever() {
@@ -203,7 +209,17 @@ mod tests {
             content: String::from(str),
             ..Template::default()
         };
-        assert!(t.parse_hash_str_list().unwrap().len() == 0)
+        assert!(t.parse_hash_str_list().unwrap().is_empty())
+    }
+    #[test]
+    fn parse_template_fuzz_crash_1() {
+        let str = r#"{{ EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE9EEEEEEEEEEEEEEEEEE1A }}{"#;
+
+        let t = Template {
+            content: String::from(str),
+            ..Template::default()
+        };
+        t.parse_hash_str_list().unwrap();
     }
     #[test]
     fn render() {
