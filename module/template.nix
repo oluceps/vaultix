@@ -29,6 +29,10 @@ let
           Content of the template
         '';
       };
+      trim = (mkEnableOption { }) // {
+        default = true;
+        description = "remove trailing and leading whitespace of the secret content to insert";
+      };
       name = mkOption {
         type = types.str;
         default = submod.config._module.args.name;

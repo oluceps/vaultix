@@ -88,6 +88,9 @@ Adding nixosModule config:
         name = "template.txt";
         # to be notice that the source secret file may have trailing `\n`
         content = "this is a template for testing ${config.vaultix.placeholder.example}";
+        # removing trailing and leading whitespace by default
+        trim = true;
+        # ...
       };
     }
   };
