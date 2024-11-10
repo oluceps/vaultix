@@ -8,6 +8,9 @@ use nom::{
     IResult,
 };
 
+// 4 braces and 64 bits hash
+const PLACEHOLDER_LENGTH: usize = 70;
+
 fn parse_braced_hash(input: &str) -> IResult<&str, &str, Error<&str>> {
     delimited(
         tag("{{ "),
@@ -17,7 +20,7 @@ fn parse_braced_hash(input: &str) -> IResult<&str, &str, Error<&str>> {
 }
 
 pub fn extract_all_hashes<'a>(input: &'a str, res: &mut Vec<&'a str>) {
-    if input.len() < 66 {
+    if input.len() < PLACEHOLDER_LENGTH {
         // less than expected `{{ hash }}` length
         return;
     }
