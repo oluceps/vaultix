@@ -58,7 +58,7 @@ mod tests {
     #[test]
     fn parse_template_single() {
         let str =
-            "here has {{ dcd789434d890685da841b8db8a02b0173b90eac3774109ba9bca1b81440aa93 }} whch should be replaced";
+            "here has {{ dcd789434d890685da841b8db8a02b0173b90eac3774109ba9bca1b81440aa93 }} which should be replaced";
 
         let t = Template {
             content: String::from(str),
