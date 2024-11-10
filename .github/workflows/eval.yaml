@@ -2,8 +2,13 @@ name: Evaluate
 on:
   pull_request:
     branches: ["*"]
+    paths-ignore: &ign
+      - 'docs/**'
+      - '**/*.md'
   push:
     branches: ["main", "dev"]
+    paths-ignore: *ign
+
 jobs:
   check:
     runs-on: ubuntu-latest

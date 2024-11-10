@@ -2,7 +2,9 @@ name: Fuzzy test
 on:
   pull_request:
     branches: ["*"]
-
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
 jobs:
   clippy_check:
     runs-on: ubuntu-latest
