@@ -7,7 +7,7 @@
 
 Secret management for NixOS.
 
-Highly inspired by agenix-rekey and sops-nix. Based on rust age crate.
+This project is highly inspired by [agenix-rekey](https://github.com/oddlama/agenix-rekey) and [sops-nix](https://github.com/Mic92/sops-nix). Based on rust [age](https://docs.rs/age/latest/age) crate.
 
 + Age Plugin Compatible
 + Support Template
