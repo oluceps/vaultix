@@ -1,7 +1,8 @@
 use crate::profile::Template;
 use eyre::Result;
 use nom::{
-    bytes::complete::{is_not, tag, take_while_m_n},
+    bytes::complete::{tag, take_while_m_n},
+    combinator::verify,
     error::Error,
     sequence::delimited,
     IResult,
@@ -15,15 +16,17 @@ fn parse_braced_hash(input: &str) -> IResult<&str, &str, Error<&str>> {
     )(input)
 }
 
-fn pars<'a>(text: &'a str, res: &mut Vec<&'a str>) {
-    if let Ok((brace_start_then, _)) = is_not::<&str, &str, Error<&str>>("{")(text) {
-        if let Ok((remain, hashes)) = parse_braced_hash(brace_start_then) {
-            res.push(hashes);
-            if !remain.is_empty() {
-                pars(remain, res);
-            }
-        };
-    };
+pub fn extract_all_hashes<'a>(input: &'a str, res: &mut Vec<&'a str>) {
+    if let Ok((o, b)) = verify(parse_braced_hash, |_: &str| true)(input) {
+        res.push(b);
+        extract_all_hashes(o, res)
+    } else if input.len() < 66 {
+        // less than expected `{{ hash }}` length
+        return;
+    } else {
+        let this = &input[1..];
+        extract_all_hashes(this, res)
+    }
 }
 
 impl Template {
@@ -33,15 +36,13 @@ impl Template {
 
         let mut res = vec![];
         let text = format!(" {}", text); // hack
-        pars(text.as_str(), &mut res);
+        extract_all_hashes(text.as_str(), &mut res);
         Ok(res
             .into_iter()
             .map(|s| decode(s).expect("hex decode"))
             .collect())
     }
 }
-
-// pub struct Template
 
 #[cfg(test)]
 mod tests {
@@ -94,6 +95,38 @@ mod tests {
             hex!("cd789434d890685da841b8db8a02b0173b90eac3774109ba9bca1b81440a2a93"),
             l.first().unwrap().as_slice()
         )
+    }
+    #[test]
+    fn parse_template_normal() {
+        let str = "{{ cd789434d890685da841b8db8a02b0173b90eac3774109ba9bca1b81440a2a93 }}";
+
+        let t = Template {
+            content: String::from(str),
+            ..Template::default()
+        };
+        let l = t.parse_hash_str_list().unwrap();
+        assert_eq!(
+            hex!("cd789434d890685da841b8db8a02b0173b90eac3774109ba9bca1b81440a2a93"),
+            l.first().unwrap().as_slice()
+        )
+    }
+    #[test]
+    fn parse_template_mix() {
+        let str = "{{ cd789434d890685da841b8db8a02b0173b90eac3774109ba9bca1b81440a2a93 }} {{ {{ c4e0ae1067d1ee736e051d7927d783bb70b032bf116f618454bf47122956d5ce }}";
+
+        let t = Template {
+            content: String::from(str),
+            ..Template::default()
+        };
+        let l = t.parse_hash_str_list().unwrap();
+        assert_eq!(
+            hex!("cd789434d890685da841b8db8a02b0173b90eac3774109ba9bca1b81440a2a93"),
+            l.first().unwrap().as_slice()
+        );
+        assert_eq!(
+            hex!("c4e0ae1067d1ee736e051d7927d783bb70b032bf116f618454bf47122956d5ce"),
+            l.get(1).unwrap().as_slice()
+        );
     }
     #[test]
     fn parse_template_with_heading_white() {

@@ -257,7 +257,6 @@ impl Profile {
                             format!("{{{{ {} }}}}", hex::encode(k.as_slice())).as_str(),
                             String::from_utf8_lossy(v).to_string().as_str(),
                         );
-                        trace!("processed template: {}", template);
                     });
 
                 deploy_to_fs(
