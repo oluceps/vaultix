@@ -14,8 +14,7 @@ impl Profile {
                 self.settings.host_pubkey.as_str(),
             )
             .inner()
-            .into_values()
-            .map(|p| {
+            .into_values().try_for_each(|p| {
                 debug!("checking in-store path: {}", p.path.display());
                 if !p.path.exists() {
                     error!("path not found: {}", p.path.display());
@@ -25,6 +24,5 @@ impl Profile {
                 }
                 Ok(())
             })
-            .collect()
     }
 }

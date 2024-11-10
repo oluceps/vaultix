@@ -16,11 +16,11 @@ impl ParsedIdentity {
             recipient,
         }
     }
-    pub fn get_identity(&self) -> &Box<dyn Identity> {
-        &self.identity
+    pub fn get_identity(&self) -> &dyn Identity {
+        self.identity.as_ref()
     }
-    pub fn _get_recipient(&self) -> &Box<dyn Recipient> {
-        &self.recipient
+    pub fn _get_recipient(&self) -> &dyn Recipient {
+        self.recipient.as_ref()
     }
 }
 
@@ -32,9 +32,9 @@ impl TryInto<ParsedIdentity> for RawIdentity {
             pubkey: _, // not required. gen from prv key so fast.
         } = self;
         if identity.is_empty() {
-            return Err(eyre!(
+            Err(eyre!(
                 "No identity found, require `vaultix.settings.identity`."
-            ));
+            ))
         } else {
             macro_rules! create {
                 ($method:ident,  $err_context:expr) => {{
@@ -52,7 +52,7 @@ impl TryInto<ParsedIdentity> for RawIdentity {
 
             let recip = create!(to_recipients, "into recip fail");
 
-            return Ok(ParsedIdentity::from_exist(ident, recip));
+            Ok(ParsedIdentity::from_exist(ident, recip))
         }
     }
 }

@@ -50,7 +50,11 @@ fn deploy_to_fs(
             .map_err(|e| eyre!("parse octal permission err: {}", e))?;
         let permissions = Permissions::from_mode(mode);
 
-        let file = OpenOptions::new().create(true).write(true).open(p)?;
+        let file = OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .open(p)?;
 
         file.set_permissions(permissions)?;
 
@@ -120,7 +124,7 @@ impl Profile {
         let res = match self.read_decrypted_mount_point() {
             Err(e) if e.kind() == ErrorKind::NotFound => {
                 let support_ramfs =
-                    SupportedFilesystems::new().and_then(|fss| Ok(fss.is_supported("ramfs")));
+                    SupportedFilesystems::new().map(|fss| fss.is_supported("ramfs"));
                 if !support_ramfs? {
                     let err =
                         "ramfs not supported! Refusing extract secret since it will write to disk";
@@ -203,10 +207,10 @@ impl Profile {
                 .wrap_err(eyre!(
                     "cannot create target extract dir with generation number"
                 ))
-                .and_then(|p| {
-                    let _ = fs::set_permissions(&p, Permissions::from_mode(0o751))
-                        .wrap_err(eyre!("set permission"));
-                    Ok(p)
+                .inspect(|p| {
+                    fs::set_permissions(p, Permissions::from_mode(0o751))
+                        .wrap_err(eyre!("set permission"))
+                        .expect("set permission");
                 })?
         };
 
@@ -222,7 +226,7 @@ impl Profile {
             .expect("err");
         });
 
-        if self.templates.len() != 0 {
+        if !self.templates.is_empty() {
             info!("start deploy templates");
             use sha2::{Digest, Sha256};
 
@@ -236,7 +240,7 @@ impl Profile {
             let hashstr_ctx_map: HashMap<Vec<u8>, &Vec<u8>> = plain_map
                 .inner_ref()
                 .iter()
-                .map(|(k, v)| (get_hashed_id(*k), v))
+                .map(|(k, v)| (get_hashed_id(k), v))
                 .collect();
 
             self.templates.clone().iter().for_each(|(_, t)| {
@@ -285,10 +289,8 @@ mod tests {
     fn parse_ssh_host_pub_key() {
         // all 0x01
         let cipher_str = "age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs3290gq";
-        if let Ok(_) = age::ssh::Recipient::from_str(&cipher_str) {
-            assert!(true)
-        } else {
-            let _ = age::x25519::Recipient::from_str(&cipher_str).unwrap();
+        if age::ssh::Recipient::from_str(cipher_str).is_err() {
+            let _ = age::x25519::Recipient::from_str(cipher_str).unwrap();
         }
     }
 }

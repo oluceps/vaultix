@@ -95,20 +95,21 @@ macro_rules! impl_from_iterator_for_secmap {
 }
 impl_from_iterator_for_secmap!(Vec<u8>, blake3::Hash, UniPath, SecBuf<HostEnc>);
 
-macro_rules! impl_into_secmap_for_themap {
+macro_rules! impl_from_for_secmap {
     ($($t:ty),*) => {
         $(
-            impl<'a> Into<SecMap<'a, SecPBWith<$t>>>
-                for HashMap<&'a profile::Secret, SecPBWith<$t>>
+            impl<'a> From<HashMap<&'a profile::Secret, SecPBWith<$t>>>
+                for SecMap<'a, SecPBWith<$t>>
             {
-                fn into(self) -> SecMap<'a, SecPBWith<$t>> {
-                    SecMap::<SecPBWith<$t>>(self)
+                fn from(map: HashMap<&'a profile::Secret, SecPBWith<$t>>) -> Self {
+                    SecMap::<SecPBWith<$t>>(map)
                 }
             }
         )*
     };
 }
-impl_into_secmap_for_themap!(InCfg, InStore);
+
+impl_from_for_secmap!(InCfg, InStore);
 
 #[derive(Debug, Clone)]
 pub struct SecMap<'a, P>(HashMap<&'a profile::Secret, P>);
@@ -122,7 +123,7 @@ impl<'a, T> SecMap<'a, T> {
     }
 }
 
-impl<'a, T> SecMap<'a, SecPath<PathBuf, T>> {
+impl<T> SecMap<'_, SecPath<PathBuf, T>> {
     fn have(&self, p: &PathBuf) -> bool {
         for ip in self.inner_ref().values() {
             if &ip.path == p {
@@ -167,7 +168,7 @@ impl<'a> SecMap<'a, SecPBWith<InStore>> {
     pub fn bake_ctx(self) -> Result<SecMap<'a, SecBuf<HostEnc>>> {
         self.inner()
             .into_iter()
-            .map(|(k, v)| v.read_buffer().and_then(|b| Ok((k, SecBuf::from(b)))))
+            .map(|(k, v)| v.read_buffer().map(|b| (k, SecBuf::from(b))))
             .try_collect::<SecMap<SecBuf<HostEnc>>>()
     }
 }
@@ -193,7 +194,7 @@ pub struct Renc<'a> {
 impl<'a> Renc<'a> {
     pub fn create(secrets: &'a SecretSet, host_dir: PathBuf, host_recip: &'a str) -> Self {
         let instore = SecMap::<SecPBWith<InStore>>::create(secrets);
-        let incfg = SecMap::<SecPBWith<InCfg>>::create(&secrets, host_dir.clone(), host_recip);
+        let incfg = SecMap::<SecPBWith<InCfg>>::create(secrets, host_dir.clone(), host_recip);
         incfg.clean_old(host_dir.clone()).expect("success");
         let map = incfg
             .inner()
@@ -219,7 +220,7 @@ impl<'a> Renc<'a> {
             .inner()
             .into_iter()
             .filter_map(|(k, v)| {
-                let enc_hash = v.store.calc_hash(&self.host_recip).ok()?;
+                let enc_hash = v.store.calc_hash(self.host_recip).ok()?;
                 let mut renc_path = self.host_dir.clone();
                 renc_path.push(enc_hash.to_string());
                 if renc_path.exists() {
@@ -236,31 +237,29 @@ impl<'a> Renc<'a> {
     }
 }
 
-impl<'a> SecMap<'a, UniPath> {
+impl SecMap<'_, UniPath> {
     pub fn makeup(self, recips: Vec<Rc<dyn Recipient>>, ident: &dyn Identity) -> Result<()> {
-        self.inner()
-            .into_iter()
-            .map(|(_sec, sec_path)| {
-                let UniPath { store, real } = sec_path;
-                use std::io::Write;
+        self.inner().into_values().try_for_each(|sec_path| {
+            let UniPath { store, real } = sec_path;
+            use std::io::Write;
 
-                trace!("re-encrypted output path {}", real.path.display());
-                let enc_ctx = store.read_buffer().expect("read buffer in store err");
-                // rencrypt
-                let renc_ctx = SecBuf::<AgeEnc>::new(enc_ctx)
-                    .renc(ident, recips.first().expect("have").clone())
-                    .expect("renc_ctx err");
+            trace!("re-encrypted output path {}", real.path.display());
+            let enc_ctx = store.read_buffer().expect("read buffer in store err");
+            // rencrypt
+            let renc_ctx = SecBuf::<AgeEnc>::new(enc_ctx)
+                .renc(ident, recips.first().expect("have").clone())
+                .expect("renc_ctx err");
 
-                let mut target_file = fs::OpenOptions::new()
-                    .write(true)
-                    .create(true)
-                    .open(real.path.clone())?;
+            let mut target_file = fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(real.path.clone())?;
 
-                target_file
-                    .write_all(renc_ctx.buf_ref())
-                    .wrap_err_with(|| eyre!("write renc file error"))
-            })
-            .collect()
+            target_file
+                .write_all(renc_ctx.buf_ref())
+                .wrap_err_with(|| eyre!("write renc file error"))
+        })
     }
 }
 
