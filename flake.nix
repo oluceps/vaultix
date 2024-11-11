@@ -74,15 +74,13 @@
             };
 
             packages = rec {
-              default = (
-                buildPackage {
-                  src = craneLib.cleanCargoSource ./.;
-                  nativeBuildInputs = [
-                    pkgs.rustPlatform.bindgenHook
-                  ];
-                  meta.mainProgram = "vaultix";
-                }
-              );
+              default = buildPackage {
+                src = craneLib.cleanCargoSource ./.;
+                nativeBuildInputs = [
+                  pkgs.rustPlatform.bindgenHook
+                ];
+                meta.mainProgram = "vaultix";
+              };
               vaultix = default;
             };
 

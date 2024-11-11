@@ -266,7 +266,7 @@ in
     let
       profile = pkgs.writeTextFile {
         name = "secret-meta-${config.networking.hostName}";
-        text = (builtins.toJSON cfg);
+        text = builtins.toJSON cfg;
       };
       checkRencSecsReport =
         pkgs.runCommandNoCCLocal "secret-check-report" { }
