@@ -247,7 +247,7 @@ impl SecMap<'_, UniPath> {
             let enc_ctx = store.read_buffer().expect("read buffer in store err");
             // rencrypt
             let renc_ctx = SecBuf::<AgeEnc>::new(enc_ctx)
-                .renc(ident, recips.first().expect("have").clone())
+                .renc(ident, recips.clone())
                 .expect("renc_ctx err");
 
             let mut target_file = fs::OpenOptions::new()

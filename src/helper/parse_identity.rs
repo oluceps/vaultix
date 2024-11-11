@@ -1,14 +1,31 @@
-use crate::profile::RawIdentity;
 use age::{Identity, IdentityFile, Recipient};
 use eyre::{eyre, ContextCompat};
+use serde::Deserialize;
 
 use super::callback::UiCallbacks;
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct RawIdentity {
+    pub identity: String,
+    #[allow(dead_code)]
+    pub pubkey: String,
+}
 
 #[allow(dead_code)]
 pub struct ParsedIdentity {
     identity: Box<dyn Identity>,
     recipient: Box<dyn Recipient>,
 }
+
+impl From<String> for RawIdentity {
+    fn from(s: String) -> Self {
+        Self {
+            identity: s,
+            pubkey: String::default(),
+        }
+    }
+}
+
 impl ParsedIdentity {
     pub fn from_exist(identity: Box<dyn Identity>, recipient: Box<dyn Recipient>) -> Self {
         Self {

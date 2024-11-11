@@ -5,7 +5,6 @@ use std::{
     os::unix::fs::PermissionsExt,
     path::PathBuf,
     rc::Rc,
-    str::FromStr,
 };
 
 use crate::{
@@ -17,7 +16,8 @@ use crate::{
     profile::{self, HostKey, Profile},
 };
 
-use age::{ssh, x25519, Recipient};
+use crate::helper::parse_recipient::RawRecip;
+use age::Recipient;
 use eyre::{eyre, Context, Result};
 use spdlog::{debug, error, info, trace};
 use sys_mount::{Mount, MountFlags, SupportedFilesystems};
@@ -91,31 +91,8 @@ impl Profile {
         }
     }
     pub fn get_host_recip(&self) -> Result<Rc<dyn Recipient>> {
-        let recip_str = self.settings.host_pubkey.as_str();
-        macro_rules! try_recipients {
-            ($pub_str:expr, $($type:path),+) => {
-                $(
-                    if let Ok(o) = <$type>::from_str($pub_str) {
-                        return Ok(Rc::new(o) as Rc<dyn Recipient>);
-                    }
-                )+
-            };
-        }
-        try_recipients!(recip_str, ssh::Recipient, x25519::Recipient);
-        Err(eyre!("incompatible recipient type"))
-    }
-    pub fn _get_extra_recip(&self) -> Result<impl Iterator<Item = Box<dyn Recipient>>> {
-        let extra_recips = self
-            .settings
-            .extra_recipients
-            .iter()
-            .map(|r| {
-                age::x25519::Recipient::from_str(r.as_str())
-                    .map(|r| Box::new(r) as Box<dyn Recipient>)
-                    .map_err(|_| eyre!("parse extra recipient error"))
-            })
-            .collect::<Result<Vec<Box<dyn Recipient>>>>()?;
-        Ok(extra_recips.into_iter())
+        let recip: RawRecip = self.settings.host_pubkey.clone().into();
+        recip.try_into()
     }
 
     /// init decrypted mount point and return the generation count
@@ -283,19 +260,5 @@ impl Profile {
             info!("deployment success");
         }
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parse_ssh_host_pub_key() {
-        // all 0x01
-        let cipher_str = "age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs3290gq";
-        if age::ssh::Recipient::from_str(cipher_str).is_err() {
-            let _ = age::x25519::Recipient::from_str(cipher_str).unwrap();
-        }
     }
 }

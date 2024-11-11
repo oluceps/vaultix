@@ -1,17 +1,16 @@
+use age::Recipient;
 use eyre::{eyre, Context, Result};
 use spdlog::{debug, error, info};
+use std::rc::Rc;
 use std::{fs, path::PathBuf};
 
+use crate::helper::parse_recipient::RawRecip;
 use crate::helper::stored::Renc;
 use crate::interop::add_to_store;
 use crate::profile::Profile;
 
-use crate::helper::parse_identity::ParsedIdentity;
+use crate::helper::parse_identity::{ParsedIdentity, RawIdentity};
 impl Profile {
-    pub fn get_parsed_ident(&self) -> Result<ParsedIdentity> {
-        self.settings.identity.clone().try_into()
-    }
-
     /**
     read secret metadata from profile
 
@@ -20,7 +19,12 @@ impl Profile {
     encrypt with host public key, output to `./secrets/renced/$host`
     and add to nix store.
     */
-    pub fn renc(self, flake_root: PathBuf) -> Result<()> {
+    pub fn renc(
+        self,
+        flake_root: PathBuf,
+        identity: String,
+        ext_recipient: Vec<String>,
+    ) -> Result<()> {
         info!(
             "rencrypt for host [{}]",
             self.settings.host_identifier.clone()
@@ -64,11 +68,24 @@ impl Profile {
         )
         .filter_exist();
 
-        let key_pair = self.get_parsed_ident()?;
-        let key = key_pair.get_identity();
+        let key_pair: Result<ParsedIdentity> = RawIdentity::from(identity).try_into();
 
-        let recip = self.get_host_recip()?;
-        if let Err(e) = data.map.makeup(vec![recip], key) {
+        let hostpub_recip = self.get_host_recip()?;
+        let all_recip = {
+            let mut extra = ext_recipient
+                .into_iter()
+                .map(|s| {
+                    RawRecip::from(s)
+                        .try_into()
+                        .expect("parse extra recipient fail")
+                })
+                .collect::<Vec<Rc<dyn Recipient>>>();
+
+            extra.push(hostpub_recip);
+            extra
+        };
+
+        if let Err(e) = data.map.makeup(all_recip, key_pair?.get_identity()) {
             return Err(eyre!("makeup error: {}", e));
         } else {
             let o = add_to_store(renc_path)?;

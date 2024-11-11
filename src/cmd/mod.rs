@@ -6,7 +6,7 @@ use {argh::FromArgs, std::fmt::Debug};
 
 mod check;
 mod deploy;
-// mod edit;
+mod edit;
 mod renc;
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -34,7 +34,14 @@ enum SubCmd {
 #[derive(FromArgs, PartialEq, Debug)]
 /// Re-encrypt changed files
 #[argh(subcommand, name = "renc")]
-pub struct RencSubCmd {}
+pub struct RencSubCmd {
+    #[argh(option)]
+    /// identity for decrypt secret
+    identity: String,
+    #[argh(option)]
+    /// extra recipient (as backup)
+    recipient: Vec<String>,
+}
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// Edit encrypted file
@@ -73,16 +80,20 @@ impl Args {
 
         trace!("{:#?}", profile);
 
-        match self.app {
-            SubCmd::Renc(RencSubCmd {}) => {
+        match &self.app {
+            SubCmd::Renc(RencSubCmd {
+                identity,
+                recipient,
+            }) => {
                 debug!("start re-encrypt secrets");
-                profile.renc(flake_root)
+                profile.renc(flake_root, identity.clone(), recipient.clone())
             }
             SubCmd::Deploy(DeploySubCmd {}) => {
                 info!("deploying secrets");
                 profile.deploy()
             }
             SubCmd::Edit(_) => {
+                info!("editing secrets");
                 todo!("you can simply use rage cli, with recipient of `settings.identity`")
             }
             SubCmd::Check(_) => {
