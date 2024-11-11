@@ -3,7 +3,6 @@
   pkgs,
   package,
   identity,
-  extraRecipients,
   ...
 }:
 let
@@ -13,7 +12,6 @@ let
 
   vaultixs = map (n: n.config.vaultix) (attrValues nodes);
   bin = pkgs.lib.getExe package;
-  recipientsArg = concatStringsSep " " extraRecipients;
 
 in
 writeShellScriptBin "renc" (
@@ -26,7 +24,7 @@ writeShellScriptBin "renc" (
           text = builtins.toJSON n;
         };
       in
-      "${bin} ${profile} renc --identity ${identity} --recipient ${recipientsArg}"
+      "${bin} --profile ${profile} renc --identity ${identity}"
     ) vaultixs
   )
 )

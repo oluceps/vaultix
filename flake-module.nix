@@ -23,7 +23,7 @@ in
           lib.genAttrs
             [
               "renc"
-              # "edit"
+              "edit"
             ]
             (
               app:

@@ -22,11 +22,7 @@ This project is highly inspired by [agenix-rekey](https://github.com/oddlama/age
 
 + `nix-command` feature enabled
 + `flake-parts` structured config
-+ `self` as specialArgs, to `nixosSystem`
 + `systemd.sysusers` or `services.userborn` option enabled
-
-> [!NOTE]
-> The `edit` subcommand is not implement yet, For adding new secrets, you could just simply use `rage` cli, with recipient of `settings.identity`.
 
 ### Configuration:
 
@@ -40,8 +36,17 @@ outputs = inputs@{ flake-parts, self, ... }:
   { ... }:
   {
     imports = [inputs.vaultix.flakeModules.default];
-    perSystem = {
-      vaultix.nodes = self.nixosConfigurations;
+
+    perSystem.vaultix = {
+
+      nodes = self.nixosConfigurations;
+
+      identity =
+        # See https://github.com/str4d/age-plugin-yubikey
+        # Also supports age native secrets (recommend protected with passphase)
+        (self + "/secret/age-yubikey-identity-0000ffff.txt.pub");
+
+      extraRecipients = [ ageKey ];
     };
     # ...
   }
@@ -61,15 +66,6 @@ Adding nixosModule config:
       storageLocation =
         # relative to flake root. different by hosts.
         "./secret/renc/${config.networking.hostName}";
-
-      identity =
-        # See https://github.com/str4d/age-plugin-yubikey
-        # Also supports age native secrets (recommend protected with passphase)
-        (self + "/secret/age-yubikey-identity-0000ffff.txt.pub");
-
-      # extraRecipients =
-      # not implement yet
-      #  [ data.keys.ageKey ];
     };
 
     secrets = {
@@ -120,31 +116,10 @@ The wrapped vaultix will decrypt cipher content to plaintext and encrypt it with
 nix run .#vaultix.x86_64-linux.renc
 ```
 
-## Cli Args
-
-Seldom use cli directly. Use Nix Wrapped App such as `nix run .#vaultix.x86_64-linux.renc`.
-
-Currently not support `edit` command, you could directly use rage for creating your encrypted file.
-
+## Nix App: edit
 
 ```bash
-> ./vaultix --help
-Usage: vaultix <profile> [-f <flake-root>] <command> [<args>]
-
-Vaultix cli | Secret manager for NixOS
-
-Positional Arguments:
-  profile           secret profile
-
-Options:
-  -f, --flake-root  toplevel of flake repository
-  --help            display usage information
-
-Commands:
-  renc              Re-encrypt changed files
-  edit              Edit encrypted file # NOT SUPPORT YET
-  check             Check secret status
-  deploy            Decrypt and deploy cipher credentials
+nix run .#vaultix.x86_64-linux.edit -- ./secrets/some.age
 ```
 
 ## TODO

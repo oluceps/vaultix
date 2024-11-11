@@ -11,10 +11,9 @@ pub struct RawIdentity {
     pub pubkey: String,
 }
 
-#[allow(dead_code)]
 pub struct ParsedIdentity {
-    identity: Box<dyn Identity>,
-    recipient: Box<dyn Recipient>,
+    pub identity: Box<dyn Identity>,
+    pub recipient: Box<dyn Recipient>,
 }
 
 impl From<String> for RawIdentity {

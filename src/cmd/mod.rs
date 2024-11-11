@@ -1,6 +1,6 @@
 use std::{fs, path::PathBuf};
 
-use eyre::Context;
+use eyre::{Context, ContextCompat};
 use spdlog::prelude::*;
 use {argh::FromArgs, std::fmt::Debug};
 
@@ -14,9 +14,9 @@ mod renc;
 pub struct Args {
     #[argh(subcommand)]
     app: SubCmd,
-    #[argh(positional)]
+    #[argh(option, short = 'p')]
     /// secret profile
-    profile: String,
+    profile: Option<String>,
     #[argh(option, short = 'f')]
     /// toplevel of flake repository
     flake_root: Option<String>,
@@ -35,21 +35,24 @@ enum SubCmd {
 /// Re-encrypt changed files
 #[argh(subcommand, name = "renc")]
 pub struct RencSubCmd {
-    #[argh(option)]
+    #[argh(option, short = 'i')]
     /// identity for decrypt secret
     identity: String,
-    #[argh(option)]
-    /// extra recipient (as backup)
-    recipient: Vec<String>,
 }
 
-#[derive(FromArgs, PartialEq, Debug)]
+#[derive(FromArgs, PartialEq, Debug, Clone)]
 /// Edit encrypted file
 #[argh(subcommand, name = "edit")]
 pub struct EditSubCmd {
     #[argh(positional)]
     /// file to edit
     file: String,
+    #[argh(option, short = 'i')]
+    /// identity for decrypt secret
+    identity: Option<String>,
+    #[argh(option, short = 'r')]
+    /// recipients for encrypt secrets
+    recipients: Vec<String>,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -67,9 +70,16 @@ impl Args {
     pub fn ayaya(&self) -> eyre::Result<()> {
         use super::profile::Profile;
 
-        let profile: Profile = {
-            let file = fs::read_to_string(&self.profile).wrap_err("arg `profile` not found")?;
-            serde_json::from_str(file.as_str())?
+        let profile = || -> eyre::Result<Profile> {
+            let file = &self
+                .profile
+                .clone()
+                .wrap_err_with(|| eyre::eyre!("this command requires profile"))
+                .and_then(|i| {
+                    fs::read_to_string(i).wrap_err_with(|| eyre::eyre!("read profile error"))
+                })
+                .wrap_err("arg `profile` not found")?;
+            serde_json::from_str(file.as_str()).wrap_err_with(|| eyre::eyre!("parse profile fail"))
         };
 
         let flake_root = if let Some(f) = &self.flake_root {
@@ -78,26 +88,24 @@ impl Args {
             std::env::current_dir()?
         };
 
-        trace!("{:#?}", profile);
-
         match &self.app {
-            SubCmd::Renc(RencSubCmd {
-                identity,
-                recipient,
-            }) => {
+            SubCmd::Renc(RencSubCmd { identity }) => {
                 debug!("start re-encrypt secrets");
-                profile.renc(flake_root, identity.clone(), recipient.clone())
+                let profile = profile()?;
+                profile.renc(flake_root, identity.clone())
             }
             SubCmd::Deploy(DeploySubCmd {}) => {
                 info!("deploying secrets");
+                let profile = profile()?;
                 profile.deploy()
             }
-            SubCmd::Edit(_) => {
+            SubCmd::Edit(e) => {
                 info!("editing secrets");
-                todo!("you can simply use rage cli, with recipient of `settings.identity`")
+                edit::edit(e.clone())
             }
             SubCmd::Check(_) => {
                 info!("start checking");
+                let profile = profile()?;
                 profile.check()?;
                 info!("check complete");
                 Ok(())

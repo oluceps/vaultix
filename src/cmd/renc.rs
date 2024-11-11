@@ -1,10 +1,7 @@
-use age::Recipient;
 use eyre::{eyre, Context, Result};
 use spdlog::{debug, error, info};
-use std::rc::Rc;
 use std::{fs, path::PathBuf};
 
-use crate::helper::parse_recipient::RawRecip;
 use crate::helper::stored::Renc;
 use crate::interop::add_to_store;
 use crate::profile::Profile;
@@ -19,12 +16,7 @@ impl Profile {
     encrypt with host public key, output to `./secrets/renced/$host`
     and add to nix store.
     */
-    pub fn renc(
-        self,
-        flake_root: PathBuf,
-        identity: String,
-        ext_recipient: Vec<String>,
-    ) -> Result<()> {
+    pub fn renc(self, flake_root: PathBuf, identity: String) -> Result<()> {
         info!(
             "rencrypt for host [{}]",
             self.settings.host_identifier.clone()
@@ -71,21 +63,11 @@ impl Profile {
         let key_pair: Result<ParsedIdentity> = RawIdentity::from(identity).try_into();
 
         let hostpub_recip = self.get_host_recip()?;
-        let all_recip = {
-            let mut extra = ext_recipient
-                .into_iter()
-                .map(|s| {
-                    RawRecip::from(s)
-                        .try_into()
-                        .expect("parse extra recipient fail")
-                })
-                .collect::<Vec<Rc<dyn Recipient>>>();
 
-            extra.push(hostpub_recip);
-            extra
-        };
-
-        if let Err(e) = data.map.makeup(all_recip, key_pair?.get_identity()) {
+        if let Err(e) = data
+            .map
+            .makeup(vec![hostpub_recip], key_pair?.get_identity())
+        {
             return Err(eyre!("makeup error: {}", e));
         } else {
             let o = add_to_store(renc_path)?;

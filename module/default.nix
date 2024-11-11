@@ -28,7 +28,6 @@ let
     options.systemd ? sysusers && (config.systemd.sysusers.enable || config.services.userborn.enable)
   ) "`systemd.sysusers` or `services.userborn` must be enabled.";
 
-  # TODO: canonicalize this path, beauty
   storagePath = "/" + self + "/" + cfg.settings.storageLocation;
   storageExist = builtins.pathExists storagePath;
   storageNotFoundWarn =
@@ -55,10 +54,6 @@ let
             (builtins.path { path = self + "/" + submod.config.storageLocation; })
           else
             pkgs.emptyDirectory;
-        example = literalExpression ''./. /* <- flake root */ + "/secrets/renced/myhost" /* separate folder for each host */'';
-        description = ''
-          The local storage directory for re-encrypted secrets. MUST be a str of path related to flake root.
-        '';
       };
 
       decryptedDir = mkOption {

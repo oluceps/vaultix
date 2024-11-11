@@ -32,10 +32,10 @@ macro_rules! eval_nix_command {
     }};
 }
 
-pub fn eval_extra_recipient<H: AsRef<str> + Display>(host: H) -> Result<Vec<String>> {
+pub fn _eval_extra_recipient<H: AsRef<str> + Display>(host: H) -> Result<Vec<String>> {
     eval_nix_command!(host.as_ref(), "extraRecipients", Vec<String>)
 }
 
-pub fn eval_host_pubkey<H: AsRef<str> + Display>(host: H) -> Result<String> {
+pub fn _eval_host_pubkey<H: AsRef<str> + Display>(host: H) -> Result<String> {
     eval_nix_command!(host.as_ref(), "hostPubkey", String)
 }
