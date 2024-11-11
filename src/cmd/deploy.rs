@@ -152,28 +152,23 @@ impl Profile {
                 error!("{}", e);
                 Err(e).wrap_err(eyre!("read mountpoint error"))
             }
-            Ok(o) => {
-                o.for_each(|en| {
-                    match str::parse::<usize>(
-                        en.unwrap()
-                            .file_name()
-                            .to_string_lossy()
-                            .to_string()
-                            .as_str(),
-                    ) {
-                        Err(e) => {
-                            error!("parse mount point generation err: {:?}", e)
-                        }
-                        Ok(res) => {
-                            debug!("found mountpoint generation {}", res);
-                            if res >= max {
-                                max = res + 1;
+            Ok(ref mut o) => o.try_for_each(|en| {
+                en.wrap_err_with(|| eyre!("enter secret mount point error"))
+                    .and_then(|d| {
+                        match str::parse::<usize>(
+                            d.file_name().to_string_lossy().to_string().as_str(),
+                        ) {
+                            Err(e) => Err(eyre!("parse mount point generation err: {}", e)),
+                            Ok(res) => {
+                                debug!("found mountpoint generation {}", res);
+                                if res >= max {
+                                    max = res + 1;
+                                }
+                                Ok(())
                             }
                         }
-                    }
-                });
-                Ok(())
-            }
+                    })
+            }),
         };
 
         res.map(|_| max)
