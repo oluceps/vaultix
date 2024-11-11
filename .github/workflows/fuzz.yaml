@@ -6,7 +6,7 @@ on:
       - 'docs/**'
       - '**/*.md'
 jobs:
-  clippy_check:
+  fuzzy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
