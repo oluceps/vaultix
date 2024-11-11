@@ -57,19 +57,19 @@ Adding nixosModule config:
   vaultix = {
 
     settings = {
+      hostPubkey = "<HOST_SSH_PUBLIC_KEY_STR>";
       storageLocation =
-      # relative to flake root, used for storing host public key -
-      # re-encrypted secrets.
+        # relative to flake root. different by hosts.
         "./secret/renc/${config.networking.hostName}";
+
+      identity =
+        # See https://github.com/str4d/age-plugin-yubikey
+        # Also supports age native secrets (recommend protected with passphase)
+        (self + "/secret/age-yubikey-identity-0000ffff.txt.pub");
 
       # extraRecipients =
       # not implement yet
       #  [ data.keys.ageKey ];
-
-      identity =
-        # See https://github.com/str4d/age-plugin-yubikey
-        # Also supports age native secrets (with password encrypted)
-        (self + "/secret/age-yubikey-identity-0000ffff.txt.pub");
     };
 
     secrets = {
@@ -93,7 +93,7 @@ Adding nixosModule config:
         content = "this is a template for testing ${config.vaultix.placeholder.example}";
         # removing trailing and leading whitespace by default
         trim = true;
-        # ...
+        # ... permission options
       };
     }
   };

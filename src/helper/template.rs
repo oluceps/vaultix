@@ -8,7 +8,7 @@ use nom::{
     IResult,
 };
 
-// 4 braces and 64 bits hash
+// 4 braces + 64 bytes hash + 2 whitespace
 const PLACEHOLDER_LENGTH: usize = 70;
 
 fn parse_braced_hash(input: &str) -> IResult<&str, &str, Error<&str>> {
