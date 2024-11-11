@@ -5,11 +5,7 @@ use serde::Deserialize;
 use super::callback::UiCallbacks;
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct RawIdentity {
-    pub identity: String,
-    #[allow(dead_code)]
-    pub pubkey: String,
-}
+pub struct RawIdentity(String);
 
 pub struct ParsedIdentity {
     pub identity: Box<dyn Identity>,
@@ -18,10 +14,7 @@ pub struct ParsedIdentity {
 
 impl From<String> for RawIdentity {
     fn from(s: String) -> Self {
-        Self {
-            identity: s,
-            pubkey: String::default(),
-        }
+        Self(s)
     }
 }
 
@@ -43,10 +36,7 @@ impl ParsedIdentity {
 impl TryInto<ParsedIdentity> for RawIdentity {
     type Error = eyre::ErrReport;
     fn try_into(self) -> std::result::Result<ParsedIdentity, Self::Error> {
-        let Self {
-            identity,
-            pubkey: _, // not required. gen from prv key so fast.
-        } = self;
+        let Self(identity) = self;
         if identity.is_empty() {
             Err(eyre!(
                 "No identity found, require `vaultix.settings.identity`."
