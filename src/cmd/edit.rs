@@ -47,9 +47,15 @@ pub fn edit(arg: EditSubCmd) -> eyre::Result<()> {
             .map(SecBuf::<AgeEnc>::from)?
             .decrypt(id_parsed.identity.as_ref())?
             .inner();
+        let pre_hash = blake3::hash(buf.as_slice());
 
         let edited_buf_encrypted = {
             let edited = edit::edit(buf)?;
+
+            if blake3::hash(edited.as_bytes()) == pre_hash {
+                info!("file unchanged");
+                return Ok(());
+            }
 
             SecBuf::<Plain>::new(edited.into_bytes())
                 .encrypt(recips)?
