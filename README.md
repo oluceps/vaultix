@@ -12,7 +12,7 @@ This project is highly inspired by [agenix-rekey](https://github.com/oddlama/age
 
 + Age Plugin Compatible
 + Support Template
-+ Support identity with passphase
++ Support identity with passphrase
 + Support PIV Card (Yubikey)
 + No Bash
 
@@ -20,10 +20,12 @@ This project is highly inspired by [agenix-rekey](https://github.com/oddlama/age
 
 > [!NOTE]
 > The document not finish yet. for more option details please see [module](./module).
+
 ### Prerequisite:
 
 + `nix-command` feature enabled
 + `flake-parts` structured config
++ `self` as one of `specialArgs` for nixosSystem
 + `systemd.sysusers` or `services.userborn` option enabled
 
 ### Configuration:
@@ -45,10 +47,13 @@ outputs = inputs@{ flake-parts, self, ... }:
 
       identity =
         # See https://github.com/str4d/age-plugin-yubikey
-        # Also supports age native secrets (recommend protected with passphase)
+        # Also supports age native secrets (recommend protected with passphrase)
         (self + "/secret/age-yubikey-identity-0000ffff.txt.pub");
 
-      extraRecipients = [ ageKey ];
+      extraRecipients =
+        # Optional. Backup keys
+        # `identity` or private key of this could decrypt secret.
+        [ ageKey ];
 
       cache =
         # Path *str* relative to flake root
@@ -116,13 +121,13 @@ This step is needed every time the host key or secret content changed.
 The wrapped vaultix will decrypt cipher content to plaintext and encrypt it with target host public key, finally stored in `storagelocation`.
 
 ```bash
-nix run .#vaultix.x86_64-linux.renc
+nix run .#vaultix.app.x86_64-linux.renc
 ```
 
 ## Nix App: edit
 
 ```bash
-nix run .#vaultix.x86_64-linux.edit -- ./secrets/some.age
+nix run .#vaultix.app.x86_64-linux.edit -- ./secrets/some.age
 ```
 
 ## TODO
