@@ -6,7 +6,7 @@ on:
       - 'docs/**'
       - '**/*.md'
 jobs:
-  clippy_check:
+  fuzzy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -14,4 +14,4 @@ jobs:
         run: |
           rustup default nightly
           cargo install cargo-fuzz
-          cargo fuzz run --all-features fuzz_target_1 -- -max_len=256 -runs=16777216
+          cargo fuzz run --all-features fuzz_parser_1 -- -max_len=256 -runs=16777216

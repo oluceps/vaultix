@@ -12,6 +12,7 @@ age = { git = "https://github.com/str4d/rage.git",rev = "baf277a749c839e49f93bff
 argh = "0.1.12"
 blake3 = "1.5.4"
 console = "0.15.8"
+edit = "0.1.5"
 eyre = "0.6.12"
 hex = "0.4.3"
 hex-literal = "0.4.1"

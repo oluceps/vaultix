@@ -1,14 +1,23 @@
-use crate::profile::RawIdentity;
 use age::{Identity, IdentityFile, Recipient};
 use eyre::{eyre, ContextCompat};
+use serde::Deserialize;
 
 use super::callback::UiCallbacks;
 
-#[allow(dead_code)]
+#[derive(Debug, Deserialize, Clone)]
+pub struct RawIdentity(String);
+
 pub struct ParsedIdentity {
-    identity: Box<dyn Identity>,
-    recipient: Box<dyn Recipient>,
+    pub identity: Box<dyn Identity>,
+    pub recipient: Box<dyn Recipient>,
 }
+
+impl From<String> for RawIdentity {
+    fn from(s: String) -> Self {
+        Self(s)
+    }
+}
+
 impl ParsedIdentity {
     pub fn from_exist(identity: Box<dyn Identity>, recipient: Box<dyn Recipient>) -> Self {
         Self {
@@ -27,10 +36,7 @@ impl ParsedIdentity {
 impl TryInto<ParsedIdentity> for RawIdentity {
     type Error = eyre::ErrReport;
     fn try_into(self) -> std::result::Result<ParsedIdentity, Self::Error> {
-        let Self {
-            identity,
-            pubkey: _, // not required. gen from prv key so fast.
-        } = self;
+        let Self(identity) = self;
         if identity.is_empty() {
             Err(eyre!(
                 "No identity found, require `vaultix.settings.identity`."

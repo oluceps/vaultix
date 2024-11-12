@@ -58,8 +58,12 @@ impl<T> From<Vec<u8>> for SecBuf<T> {
 }
 
 impl SecBuf<AgeEnc> {
-    pub fn renc(&self, ident: &dyn Identity, recips: Rc<dyn Recipient>) -> Result<SecBuf<HostEnc>> {
-        self.decrypt(ident).and_then(|d| d.encrypt(vec![recips]))
+    pub fn renc(
+        &self,
+        ident: &dyn Identity,
+        recips: Vec<Rc<dyn Recipient>>,
+    ) -> Result<SecBuf<HostEnc>> {
+        self.decrypt(ident).and_then(|d| d.encrypt(recips))
     }
 }
 use eyre::eyre;
@@ -115,8 +119,10 @@ mod tests {
         let _ = buf
             .renc(
                 &key as &dyn Identity,
-                Rc::new(age::x25519::Recipient::from_str(new_recip_str).unwrap())
-                    as Rc<dyn Recipient>,
+                vec![
+                    Rc::new(age::x25519::Recipient::from_str(new_recip_str).unwrap())
+                        as Rc<dyn Recipient>,
+                ],
             )
             .unwrap();
     }

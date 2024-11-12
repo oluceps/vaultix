@@ -6,6 +6,7 @@ use spdlog::formatter::{pattern, PatternFormatter};
 mod cmd;
 mod helper;
 mod interop;
+mod parser;
 mod profile;
 use std::os::unix::process::parent_id;
 

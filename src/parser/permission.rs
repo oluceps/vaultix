@@ -4,7 +4,7 @@ fn is_oct_digit(c: char) -> bool {
     c.is_digit(8)
 }
 
-pub fn parse_octal_string(input: &str) -> Result<u32, String> {
+pub fn parse_octal_str(input: &str) -> Result<u32, String> {
     match parse_octal_permissions(input) {
         Ok((_, octal)) => Ok(octal),
         Err(_) => Err(format!("Failed to parse octal string: {}", input)),

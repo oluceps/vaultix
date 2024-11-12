@@ -10,7 +10,6 @@ let
   inherit (lib)
     types
     mkOption
-    isAttrs
     isPath
     readFile
     literalMD
@@ -29,7 +28,6 @@ let
     options.systemd ? sysusers && (config.systemd.sysusers.enable || config.services.userborn.enable)
   ) "`systemd.sysusers` or `services.userborn` must be enabled.";
 
-  # TODO: canonicalize this path, beauty
   storagePath = "/" + self + "/" + cfg.settings.storageLocation;
   storageExist = builtins.pathExists storagePath;
   storageNotFoundWarn =
@@ -56,10 +54,6 @@ let
             (builtins.path { path = self + "/" + submod.config.storageLocation; })
           else
             pkgs.emptyDirectory;
-        example = literalExpression ''./. /* <- flake root */ + "/secrets/renced/myhost" /* separate folder for each host */'';
-        description = ''
-          The local storage directory for re-encrypted secrets. MUST be a str of path related to flake root.
-        '';
       };
 
       decryptedDir = mkOption {
@@ -113,50 +107,6 @@ let
         description = ''
           Where secrets are created before they are symlinked to {option}`vaultix.settings.decryptedDir`
         '';
-      };
-
-      identity = mkOption {
-        type =
-          with types;
-          let
-            identityPathType = coercedTo path toString str;
-          in
-          nullOr (
-            coercedTo identityPathType
-              (
-                p:
-                if isAttrs p then
-                  p
-                else
-                  {
-                    identity = p;
-                  }
-              )
-              (submodule {
-                options = {
-                  identity = mkOption { type = identityPathType; };
-                  pubkey = mkOption {
-                    type = coercedTo path (x: if isPath x then readFile x else x) str;
-                    default = "";
-                  };
-                };
-              })
-          );
-        default = null;
-        example = {
-          identity = ./password-encrypted-identity.pub;
-          pubkey = "age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs3290gq";
-        };
-      };
-
-      extraRecipients = mkOption {
-        type = with types; listOf (coercedTo path toString str);
-
-        default = [ ];
-        example = [
-          ./backup-key.pub
-          "age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs3290gq"
-        ];
       };
 
       hostPubkey = mkOption {

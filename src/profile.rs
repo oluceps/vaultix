@@ -42,21 +42,12 @@ pub struct Settings {
     pub decrypted_dir: String,
     pub decrypted_mount_point: String,
     pub host_identifier: String,
-    #[allow(dead_code)]
-    pub extra_recipients: Vec<String>,
     pub host_pubkey: String,
     pub host_keys: Vec<HostKey>,
     pub storage_location: String,
     pub storage_in_store: String,
-    pub identity: RawIdentity,
 }
 
-#[derive(Debug, Deserialize, Clone)]
-pub struct RawIdentity {
-    pub identity: String,
-    #[allow(dead_code)]
-    pub pubkey: String,
-}
 #[derive(Debug, Deserialize)]
 pub struct HostKey {
     pub path: String,

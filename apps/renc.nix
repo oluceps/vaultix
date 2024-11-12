@@ -2,6 +2,7 @@
   nodes,
   pkgs,
   package,
+  identity,
   ...
 }:
 let
@@ -23,7 +24,7 @@ writeShellScriptBin "renc" (
           text = builtins.toJSON n;
         };
       in
-      "${bin} ${profile} renc"
+      "${bin} --profile ${profile} renc --identity ${identity}"
     ) vaultixs
   )
 )

@@ -1,15 +1,12 @@
 #![no_main]
 use arbitrary::Arbitrary;
-use lib::profile;
+use lib::extract_all_hashes;
 use libfuzzer_sys;
 
 #[derive(Arbitrary, Debug)]
 struct FuzzInput(String);
 
 libfuzzer_sys::fuzz_target!(|input: FuzzInput| {
-    let t = profile::Template {
-        content: input.0,
-        ..Default::default()
-    };
-    let _ = t.parse_hash_str_list();
+    let mut v = Vec::new();
+    let _ = extract_all_hashes(input.0.as_str(), &mut v);
 });
