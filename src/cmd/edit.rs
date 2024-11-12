@@ -6,19 +6,16 @@ use std::{
 };
 
 use crate::helper::{
-    parse_identity::ParsedIdentity, parse_recipient::RawRecip, secret_buf::AgeEnc,
+    parse_identity::{ParsedIdentity, RawIdentity},
+    parse_recipient::RawRecip,
+    secret_buf::{AgeEnc, Plain, SecBuf},
+    stored::{GetSec, InCfg, SecPath},
 };
-use crate::helper::{
-    secret_buf::Plain,
-    stored::{GetSec, InCfg},
-};
-use crate::helper::{secret_buf::SecBuf, stored::SecPath};
+
 use age::Recipient;
 use eyre::{eyre, Context, ContextCompat};
 use nom::AsBytes;
 use spdlog::info;
-
-use crate::helper::parse_identity::RawIdentity;
 
 use super::EditSubCmd;
 

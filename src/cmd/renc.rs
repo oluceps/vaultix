@@ -2,11 +2,15 @@ use eyre::{eyre, Context, Result};
 use spdlog::{debug, error, info};
 use std::{fs, path::PathBuf};
 
-use crate::helper::stored::Renc;
-use crate::interop::add_to_store;
-use crate::profile::Profile;
+use crate::{
+    helper::{
+        parse_identity::{ParsedIdentity, RawIdentity},
+        stored::Renc,
+    },
+    interop::add_to_store,
+    profile::Profile,
+};
 
-use crate::helper::parse_identity::{ParsedIdentity, RawIdentity};
 impl Profile {
     /**
     read secret metadata from profile
