@@ -18,6 +18,8 @@ This project is highly inspired by [agenix-rekey](https://github.com/oddlama/age
 
 ## Setup
 
+> [!NOTE]
+> The document not finish yet. for more option details please see [module](./module).
 ### Prerequisite:
 
 + `nix-command` feature enabled
@@ -37,7 +39,7 @@ outputs = inputs@{ flake-parts, self, ... }:
   {
     imports = [inputs.vaultix.flakeModules.default];
 
-    perSystem.vaultix = {
+    flake.vaultix = {
 
       nodes = self.nixosConfigurations;
 
