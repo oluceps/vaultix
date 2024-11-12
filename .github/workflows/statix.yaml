@@ -14,7 +14,7 @@ name: Lint Nix code
 
 jobs:
   statix:
-    name: Lint code
+    name: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
