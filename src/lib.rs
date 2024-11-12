@@ -1,3 +1,4 @@
 #![feature(iterator_try_collect)]
-pub mod helper;
-pub mod profile;
+mod parser;
+pub use parser::extract_all_hashes;
+pub use parser::parse_octal_str;

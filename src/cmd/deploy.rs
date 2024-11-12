@@ -46,7 +46,7 @@ fn deploy_to_fs(
         let mut p = target_dir_ordered.clone();
         p.push(item.get_name().clone());
 
-        let mode = helper::parse_permission::parse_octal_string(item.get_mode())
+        let mode = crate::parser::parse_octal_str(item.get_mode())
             .map_err(|e| eyre!("parse octal permission err: {}", e))?;
         let permissions = Permissions::from_mode(mode);
 

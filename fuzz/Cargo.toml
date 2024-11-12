@@ -16,7 +16,7 @@ libfuzzer-sys = "0.4.8"
 path = ".."
 
 [[bin]]
-name = "fuzz_target_1"
+name = "fuzz_parser_1"
 path = "fuzz_targets/fuzz_parser_1.rs"
 test = false
 doc = false
