@@ -1,3 +1,4 @@
+- [ ] move storageInStore into flake module
 - [x] template
 - [ ] [edit] or [add] secret with extra encrypt key
 - [ ] deploy to specified location

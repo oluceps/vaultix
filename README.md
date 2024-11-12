@@ -47,6 +47,10 @@ outputs = inputs@{ flake-parts, self, ... }:
         (self + "/secret/age-yubikey-identity-0000ffff.txt.pub");
 
       extraRecipients = [ ageKey ];
+
+      cache =
+        # Path *str* relative to flake root
+        "./secrets/cache"; # default
     };
     # ...
   }
@@ -63,9 +67,6 @@ Adding nixosModule config:
 
     settings = {
       hostPubkey = "<HOST_SSH_PUBLIC_KEY_STR>";
-      storageLocation =
-        # relative to flake root. different by hosts.
-        "./secret/renc/${config.networking.hostName}";
     };
 
     secrets = {

@@ -1,6 +1,6 @@
 use std::{fs, path::PathBuf};
 
-use eyre::{Context, ContextCompat};
+use eyre::Context;
 use spdlog::prelude::*;
 use {argh::FromArgs, std::fmt::Debug};
 
@@ -16,7 +16,7 @@ pub struct Args {
     app: SubCmd,
     #[argh(option, short = 'p')]
     /// secret profile
-    profile: Option<String>,
+    profile: String,
     #[argh(option, short = 'f')]
     /// toplevel of flake repository
     flake_root: Option<String>,
@@ -38,6 +38,9 @@ pub struct RencSubCmd {
     #[argh(option, short = 'i')]
     /// identity for decrypt secret
     identity: String,
+    #[argh(option, short = 'c')]
+    /// identity for decrypt secret
+    cache: String,
 }
 
 #[derive(FromArgs, PartialEq, Debug, Clone)]
@@ -71,13 +74,8 @@ impl Args {
         use super::profile::Profile;
 
         let profile = || -> eyre::Result<Profile> {
-            let file = &self
-                .profile
-                .clone()
-                .wrap_err_with(|| eyre::eyre!("this command requires profile"))
-                .and_then(|i| {
-                    fs::read_to_string(i).wrap_err_with(|| eyre::eyre!("read profile error"))
-                })
+            let file = fs::read_to_string(&self.profile)
+                .wrap_err_with(|| eyre::eyre!("read profile error"))
                 .wrap_err("arg `profile` not found")?;
             serde_json::from_str(file.as_str()).wrap_err_with(|| eyre::eyre!("parse profile fail"))
         };
@@ -89,10 +87,10 @@ impl Args {
         };
 
         match &self.app {
-            SubCmd::Renc(RencSubCmd { identity }) => {
+            SubCmd::Renc(RencSubCmd { identity, cache }) => {
                 debug!("start re-encrypt secrets");
                 let profile = profile()?;
-                profile.renc(flake_root, identity.clone())
+                profile.renc(flake_root, identity.clone(), cache.into())
             }
             SubCmd::Deploy(DeploySubCmd {}) => {
                 info!("deploying secrets");

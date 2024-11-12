@@ -62,10 +62,6 @@
                 self.overlays.default
               ];
             };
-
-            vaultix = {
-              nodes = self.nixosConfigurations;
-            };
             apps = {
               default = {
                 type = "app";

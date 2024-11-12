@@ -17,7 +17,6 @@ let
     mkEnableOption
     mkIf
     assertMsg
-    warnIf
     ;
   inherit (config.users) users;
 
@@ -28,32 +27,15 @@ let
     options.systemd ? sysusers && (config.systemd.sysusers.enable || config.services.userborn.enable)
   ) "`systemd.sysusers` or `services.userborn` must be enabled.";
 
-  storagePath = "/" + self + "/" + cfg.settings.storageLocation;
-  storageExist = builtins.pathExists storagePath;
-  storageNotFoundWarn =
-    warnIf (!storageExist)
-      # NOTICE: here has ASCII control char `\e` which may not shown in editor
-      "[31mpath not exist: ${storagePath}\n[41;97mThis build will fail[0m please run renc app and add ${cfg.settings.storageLocation} to git first."
-      true;
-
   settingsType = types.submodule (submod: {
     options = {
 
-      storageLocation = mkOption {
-        type = types.str;
-        example = literalExpression ''./. /* <- flake root */ + "/secrets/renced/myhost" /* separate folder for each host */'';
-        description = ''
-          The local storage directory for re-encrypted secrets. MUST be a str of path related to flake root.
-        '';
-      };
-      storageInStore = mkOption {
+      cacheInStore = mkOption {
         type = types.path;
         readOnly = true;
-        default =
-          if builtins.pathExists storagePath then
-            (builtins.path { path = self + "/" + submod.config.storageLocation; })
-          else
-            pkgs.emptyDirectory;
+        default = builtins.path {
+          path = "/" + self + "/" + self.vaultix.cache + "/" + config.networking.hostName;
+        };
       };
 
       decryptedDir = mkOption {
@@ -220,9 +202,9 @@ in
       };
       checkRencSecsReport =
         pkgs.runCommandNoCCLocal "secret-check-report" { }
-          "${lib.getExe cfg.package} ${profile} check > $out";
+          "${lib.getExe cfg.package} -p ${profile} check > $out";
     in
-    mkIf (sysusers && storageNotFoundWarn) {
+    mkIf sysusers {
       systemd.services.vaultix-install-secrets = {
         wantedBy = [ "sysinit.target" ];
         after = [ "systemd-sysusers.service" ];
@@ -230,10 +212,10 @@ in
         serviceConfig = {
           Type = "oneshot";
           Environment = [
-            ("STORAGE=" + cfg.settings.storageInStore)
+            cfg.settings.cacheInStore
             checkRencSecsReport
           ];
-          ExecStart = "${lib.getExe cfg.package} ${profile} deploy";
+          ExecStart = "${lib.getExe cfg.package} -p ${profile} deploy";
           RemainAfterExit = true;
         };
       };

@@ -10,7 +10,7 @@ impl Profile {
     pub fn check(self) -> Result<()> {
         SecMap::<SecPath<_, InStore>>::create(&self.secrets)
             .renced_stored(
-                self.settings.storage_in_store.clone().into(),
+                self.settings.cache_in_store.clone().into(),
                 self.settings.host_pubkey.as_str(),
             )
             .inner()
