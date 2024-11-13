@@ -143,16 +143,16 @@ let
       };
       owner = mkOption {
         type = types.str;
-        default = "0";
+        default = "root";
         description = ''
           User of the decrypted secret.
         '';
       };
       group = mkOption {
         type = types.str;
-        default = users.${submod.config.owner}.group or "0";
+        default = users.${submod.config.owner}.group or "root";
         defaultText = literalExpression ''
-          users.''${config.owner}.group or "0"
+          users.''${config.owner}.group or "root"
         '';
         description = ''
           Group of the decrypted secret.
