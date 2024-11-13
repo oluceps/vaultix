@@ -1,13 +1,15 @@
-- [x] template
-- [ ] [edit] or [add] secret with extra encrypt key
+- [ ] test with os
 - [ ] deploy to specified location
-- [x] check command
+- [x] move storageInStore into flake module
+- [x] impl template
+- [x] [edit] or [add] secret with extra encrypt key
+- [x] check command and corresponding nix infra
 - [x] vaultix.d in ramfs
-- [x] vaultix{,.d} permission
+- [x] vaultix{,.d} permission set
 - [x] age plugin support
 - [x] [renc] calc hash and skip unchanged
 - [x] apply `Secret` metadata
 - [x] nix integration
 - [x] ~~remote machine, compare hash, needs host priv key~~
-- [ ] ~~feed the toml after renced, thus store path changed~~
-- [ ] ~~eval in vaultix to json, reduce requirement~~
+- [x] ~~feed the toml after renced, thus store path changed~~
+- [x] ~~eval in vaultix to json, reduce requirement~~

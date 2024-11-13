@@ -44,8 +44,7 @@ pub struct Settings {
     pub host_identifier: String,
     pub host_pubkey: String,
     pub host_keys: Vec<HostKey>,
-    pub storage_location: String,
-    pub storage_in_store: String,
+    pub cache_in_store: String,
 }
 
 #[derive(Debug, Deserialize)]

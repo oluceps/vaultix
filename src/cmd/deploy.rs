@@ -157,7 +157,7 @@ impl Profile {
         let host_prv_key = &self.get_host_key_identity()?;
         let plain_map: SecMap<Vec<u8>> = SecMap::<SecPath<_, InStore>>::create(&self.secrets)
             .renced_stored(
-                self.settings.storage_in_store.clone().into(),
+                self.settings.cache_in_store.clone().into(),
                 self.settings.host_pubkey.as_str(),
             )
             .bake_ctx()?

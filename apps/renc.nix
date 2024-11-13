@@ -1,30 +1,33 @@
 {
   nodes,
+  lib,
   pkgs,
   package,
   identity,
+  cache,
   ...
 }:
 let
   inherit (pkgs) writeShellScriptBin;
-  inherit (pkgs.lib) concatStringsSep;
-  inherit (builtins) attrValues;
-
-  vaultixs = map (n: n.config.vaultix) (attrValues nodes);
+  inherit (lib) concatStringsSep foldlAttrs;
   bin = pkgs.lib.getExe package;
 
+  rencCmds = foldlAttrs (
+    acc: name: value:
+
+    let
+      profile = pkgs.writeTextFile {
+        name = "secret-meta-${name}";
+        text = builtins.toJSON value.config.vaultix;
+      };
+    in
+    acc
+    ++ [
+      "${bin} --profile ${profile} renc --identity ${identity} --cache ${
+        cache + "/" + value.config.networking.hostName
+      }"
+    ]
+  ) [ ] nodes;
+
 in
-writeShellScriptBin "renc" (
-  concatStringsSep "\n" (
-    map (
-      n:
-      let
-        profile = pkgs.writeTextFile {
-          name = "secret-meta";
-          text = builtins.toJSON n;
-        };
-      in
-      "${bin} --profile ${profile} renc --identity ${identity}"
-    ) vaultixs
-  )
-)
+writeShellScriptBin "renc" (concatStringsSep "\n" rencCmds)

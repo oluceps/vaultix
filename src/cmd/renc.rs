@@ -20,7 +20,7 @@ impl Profile {
     encrypt with host public key, output to `./secrets/renced/$host`
     and add to nix store.
     */
-    pub fn renc(self, flake_root: PathBuf, identity: String) -> Result<()> {
+    pub fn renc(self, flake_root: PathBuf, identity: String, cache_path: PathBuf) -> Result<()> {
         info!(
             "rencrypt for host [{}]",
             self.settings.host_identifier.clone()
@@ -43,7 +43,7 @@ impl Profile {
         // absolute path, in config directory, suffix host ident
         let renc_path = {
             let mut p = flake_root.clone();
-            p.push(self.settings.storage_location.clone());
+            p.push(cache_path);
             // pretend err is not found
             if p.canonicalize().is_err() {
                 fs::create_dir_all(&p).wrap_err_with(|| eyre!("create storageLocation error"))?
