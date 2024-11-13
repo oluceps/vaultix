@@ -11,7 +11,10 @@ let
 
   bin = pkgs.lib.getExe package;
   recipientsArg =
-    if extraRecipients != [ ] then "--recipients" + (concatStringsSep " " extraRecipients) else "";
+    if extraRecipients != [ ] then
+      "--recipients" + " " + (concatStringsSep " " extraRecipients)
+    else
+      "";
 
 in
 writeShellScriptBin "edit-secret" "${bin} edit --identity ${identity} ${recipientsArg} $1"
