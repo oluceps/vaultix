@@ -16,7 +16,7 @@ _: {
         efiSysMountPoint = "/efi";
       };
       systemd-boot.enable = true;
-      timeout = 3;
+      timeout = 0;
     };
     initrd = {
       compressor = "zstd";
