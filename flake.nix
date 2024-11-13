@@ -42,15 +42,23 @@
         ];
         perSystem =
           {
-            # config,
             self',
-            # inputs',
             pkgs,
             system,
             ...
           }:
           let
-            toolchain = pkgs.rust-bin.nightly.latest.minimal;
+            target =
+              if system == "x86_64-linux" then
+                "x86_64-unknown-linux-gnu"
+              else if system == "aarch64-linux" then
+                "aarch64-unknown-linux-gnu"
+              else
+                throw "unsupported platform";
+            toolchain = pkgs.rust-bin.nightly.latest.minimal.override {
+              extensions = [ "rust-src" ];
+              targets = [ target ];
+            };
             craneLib = (crane.mkLib pkgs).overrideToolchain toolchain;
             inherit (craneLib) buildPackage;
           in
@@ -70,11 +78,33 @@
             };
 
             packages = rec {
-              default = buildPackage {
+              default = buildPackage rec {
                 src = craneLib.cleanCargoSource ./.;
                 nativeBuildInputs = [
                   pkgs.rustPlatform.bindgenHook
                 ];
+                RUSTFLAGS = [
+                  "-Zlocation-detail=none"
+                  "-Zfmt-debug=none"
+                ];
+                cargoVendorDir = craneLib.vendorMultipleCargoDeps {
+                  inherit (craneLib.findCargoFiles src) cargoConfigs;
+                  cargoLockList = [
+                    ./Cargo.lock
+
+                    # Unfortunately this approach requires IFD (import-from-derivation)
+                    # otherwise Nix will refuse to read the Cargo.lock from our toolchain
+                    # (unless we build with `--impure`).
+                    #
+                    # Another way around this is to manually copy the rustlib `Cargo.lock`
+                    # to the repo and import it with `./path/to/rustlib/Cargo.lock` which
+                    # will avoid IFD entirely but will require manually keeping the file
+                    # up to date!
+                    "${toolchain.passthru.availableComponents.rust-src}/lib/rustlib/src/rust/library/Cargo.lock"
+                  ];
+                };
+
+                cargoExtraArgs = ''-Z build-std -Z build-std-features="optimize_for_size" --target ${target}'';
                 meta.mainProgram = "vaultix";
               };
               vaultix = default;
@@ -86,18 +116,14 @@
               inputsFrom = [
                 pkgs.vaultix
               ];
+              env = {
+                RUSTFLAGS = "-Zlocation-detail=none -Zfmt-debug=none";
+              };
 
-              # see https://discourse.nixos.org/t/rust-src-not-found-and-other-misadventures-of-developing-rust-on-nixos/11570/12
-              RUST_SRC_PATH = "${
-                pkgs.rust-bin.nightly.latest.default.override {
-                  extensions = [ "rust-src" ];
-                }
-              }/lib/rustlib/src/rust/library";
               buildInputs = with pkgs; [
                 just
                 nushell
                 cargo-fuzz
-                rust-bin.nightly.latest.complete
               ];
             };
 
