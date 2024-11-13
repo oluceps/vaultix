@@ -1,0 +1,27 @@
+
+on:
+  pull_request:
+    branches: ["*"]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+  push:
+    branches: ["main", "dev"]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+
+name: VM test
+
+jobs:
+  vm-test:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: "write"
+      contents: "read"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Run os for test
+        run: nix run github:nix-community/nixos-anywhere -- --flake .#tester --vm-test
