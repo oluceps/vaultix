@@ -9,10 +9,6 @@
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    pre-commit-hooks = {
-      url = "github:cachix/pre-commit-hooks.nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
   outputs =
@@ -32,10 +28,26 @@
         };
       in
       {
-        imports = with inputs; [
-          pre-commit-hooks.flakeModule
-          flakeModules.default
-        ];
+        partitionedAttrs.checks = "dev";
+        partitions.dev.extraInputsFlake = ./dev;
+        partitions.dev.module =
+          { inputs, ... }:
+          {
+            imports = [
+              inputs.pre-commit-hooks.flakeModule
+              ./dev/pre-commit-hooks.nix
+            ];
+          };
+
+        imports =
+          let
+            inherit (inputs) flake-parts;
+          in
+          [
+            flake-parts.flakeModules.easyOverlay
+            flake-parts.flakeModules.partitions
+            flakeModules.default
+          ];
         systems = [
           "x86_64-linux"
           "aarch64-linux"
@@ -45,16 +57,11 @@
             self',
             pkgs,
             system,
+            config,
             ...
           }:
           let
-            target =
-              if system == "x86_64-linux" then
-                "x86_64-unknown-linux-gnu"
-              else if system == "aarch64-linux" then
-                "aarch64-unknown-linux-gnu"
-              else
-                throw "unsupported platform";
+            target = (pkgs.lib.systems.elaborate system).config;
             toolchain = pkgs.rust-bin.nightly.latest.minimal.override {
               extensions = [ "rust-src" ];
               targets = [ target ];
@@ -109,6 +116,7 @@
               };
               vaultix = default;
             };
+            overlayAttrs = config.packages;
 
             formatter = pkgs.nixfmt-rfc-style;
 
@@ -123,20 +131,9 @@
               ];
             };
 
-            pre-commit = {
-              check.enable = true;
-              settings.hooks = {
-                nixfmt-rfc-style.enable = true;
-              };
-            };
-
           };
         flake = {
           inherit flakeModules;
-
-          overlays.default = final: prev: {
-            vaultix = inputs.self.packages.${prev.system}.default;
-          };
           nixosModules.default =
             { pkgs, ... }:
             {
