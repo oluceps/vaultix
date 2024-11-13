@@ -31,6 +31,8 @@ This project is highly inspired by [agenix-rekey](https://github.com/oddlama/age
 
 ### Configuration:
 
+You could find the minimal configuration in [dev/test.nix](./dev/test.nix)
+
 Adding flake-parts flakeModule:
 
 ```nix
