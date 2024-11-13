@@ -14,7 +14,6 @@ let
     readFile
     literalMD
     literalExpression
-    mkEnableOption
     mkIf
     assertMsg
     ;

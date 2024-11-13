@@ -84,8 +84,10 @@ Adding nixosModule config:
         owner = "root";
         group = "users";
         name = "example.toml";
-        # symlink = true; # both not supported yet
-        # path = "/some/place";
+        path =
+          # Optional. Secret will be extract to this place directly
+          # if user specified.
+          "/some/place";
       };
     };
 

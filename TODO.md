@@ -1,5 +1,5 @@
 - [ ] test with os
-- [ ] deploy to specified location
+- [x] deploy to specified location
 - [x] move storageInStore into flake module
 - [x] impl template
 - [x] [edit] or [add] secret with extra encrypt key
