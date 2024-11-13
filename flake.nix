@@ -116,10 +116,6 @@
               inputsFrom = [
                 pkgs.vaultix
               ];
-              env = {
-                RUSTFLAGS = "-Zlocation-detail=none -Zfmt-debug=none";
-              };
-
               buildInputs = with pkgs; [
                 just
                 nushell
