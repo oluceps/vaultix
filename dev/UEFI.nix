@@ -1,7 +1,6 @@
 # NOTICE: All configuration in this file is just for testing
 # Not part of vaultix deploy requirements
-{ ... }:
-{
+_: {
   boot = {
     kernelParams = [
       "audit=0"

@@ -28,20 +28,24 @@
         };
       in
       {
-        partitionedAttrs.checks = "dev";
-        partitionedAttrs.nixosConfigurations = "dev";
-        partitionedAttrs.vaultix = "dev";
-        partitions.dev.extraInputsFlake = ./dev;
-        partitions.dev.module =
-          { inputs, ... }:
-          {
-            imports = [
-              inputs.pre-commit-hooks.flakeModule
-              flakeModules.default
-              ./dev/pre-commit-hooks.nix
-              ./dev/test.nix
-            ];
-          };
+        partitionedAttrs = {
+          checks = "dev";
+          nixosConfigurations = "dev";
+          vaultix = "dev";
+        };
+        partitions = {
+          dev.extraInputsFlake = ./dev;
+          dev.module =
+            { inputs, ... }:
+            {
+              imports = [
+                inputs.pre-commit-hooks.flakeModule
+                flakeModules.default
+                ./dev/pre-commit-hooks.nix
+                ./dev/test.nix
+              ];
+            };
+        };
 
         imports =
           let
