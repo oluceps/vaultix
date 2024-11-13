@@ -29,13 +29,17 @@
       in
       {
         partitionedAttrs.checks = "dev";
+        partitionedAttrs.nixosConfigurations = "dev";
+        partitionedAttrs.vaultix = "dev";
         partitions.dev.extraInputsFlake = ./dev;
         partitions.dev.module =
           { inputs, ... }:
           {
             imports = [
               inputs.pre-commit-hooks.flakeModule
+              flakeModules.default
               ./dev/pre-commit-hooks.nix
+              ./dev/test.nix
             ];
           };
 
@@ -46,7 +50,6 @@
           [
             flake-parts.flakeModules.easyOverlay
             flake-parts.flakeModules.partitions
-            flakeModules.default
           ];
         systems = [
           "x86_64-linux"
@@ -62,12 +65,17 @@
           }:
           let
             target = (pkgs.lib.systems.elaborate system).config;
-            toolchain = pkgs.rust-bin.nightly.latest.minimal.override {
-              extensions = [ "rust-src" ];
-              targets = [ target ];
-            };
-            craneLib = (crane.mkLib pkgs).overrideToolchain toolchain;
-            inherit (craneLib) buildPackage;
+            mkOverridedToolchain =
+              scale:
+              scale.override {
+                extensions = [ "rust-src" ];
+                targets = [ target ];
+              };
+            mkCraneLib = toolchain: (crane.mkLib pkgs).overrideToolchain toolchain;
+            releaseToolChain = mkOverridedToolchain pkgs.rust-bin.nightly.latest.minimal;
+            releaseCraneLib = mkCraneLib releaseToolChain;
+            devCraneLib = mkCraneLib (mkOverridedToolchain pkgs.rust-bin.nightly.latest.complete);
+            inherit (releaseCraneLib) buildPackage;
           in
           {
             _module.args.pkgs = import inputs.nixpkgs {
@@ -86,7 +94,7 @@
 
             packages = rec {
               default = buildPackage rec {
-                src = craneLib.cleanCargoSource ./.;
+                src = releaseCraneLib.cleanCargoSource ./.;
                 nativeBuildInputs = [
                   pkgs.rustPlatform.bindgenHook
                 ];
@@ -94,8 +102,8 @@
                   "-Zlocation-detail=none"
                   "-Zfmt-debug=none"
                 ];
-                cargoVendorDir = craneLib.vendorMultipleCargoDeps {
-                  inherit (craneLib.findCargoFiles src) cargoConfigs;
+                cargoVendorDir = releaseCraneLib.vendorMultipleCargoDeps {
+                  inherit (releaseCraneLib.findCargoFiles src) cargoConfigs;
                   cargoLockList = [
                     ./Cargo.lock
 
@@ -107,7 +115,7 @@
                     # to the repo and import it with `./path/to/rustlib/Cargo.lock` which
                     # will avoid IFD entirely but will require manually keeping the file
                     # up to date!
-                    "${toolchain.passthru.availableComponents.rust-src}/lib/rustlib/src/rust/library/Cargo.lock"
+                    "${releaseToolChain.passthru.availableComponents.rust-src}/lib/rustlib/src/rust/library/Cargo.lock"
                   ];
                 };
 
@@ -120,7 +128,7 @@
 
             formatter = pkgs.nixfmt-rfc-style;
 
-            devShells.default = craneLib.devShell {
+            devShells.default = devCraneLib.devShell {
               inputsFrom = [
                 pkgs.vaultix
               ];
@@ -134,14 +142,17 @@
           };
         flake = {
           inherit flakeModules;
-          nixosModules.default =
-            { pkgs, ... }:
-            {
-              imports = [ ./module ];
-              vaultix.package = withSystem pkgs.stdenv.hostPlatform.system (
-                { config, ... }: config.packages.vaultix
-              );
-            };
+          nixosModules = rec {
+            default =
+              { pkgs, ... }:
+              {
+                imports = [ ./module ];
+                vaultix.package = withSystem pkgs.stdenv.hostPlatform.system (
+                  { config, ... }: config.packages.vaultix
+                );
+              };
+            vaultix = default;
+          };
         };
       }
     );
