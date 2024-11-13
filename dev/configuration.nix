@@ -4,6 +4,7 @@
   inputs,
   modulesPath,
   pkgs,
+  lib,
   ...
 }:
 {
@@ -11,6 +12,29 @@
     inputs.disko.nixosModules.disko
     ./UEFI.nix
     (modulesPath + "/profiles/qemu-guest.nix")
+    # (modulesPath + "/profiles/perlless.nix") :(
+
+    # reduce size. see https://sidhion.com/blog/posts/nixos_server_issues
+    (
+      { lib, ... }:
+      {
+        disabledModules = [ "security/wrappers/default.nix" ];
+
+        options.security = {
+          wrappers = lib.mkOption {
+            type = lib.types.attrs;
+            default = { };
+          };
+          wrapperDir = lib.mkOption {
+            type = lib.types.path;
+            default = "/run/wrappers/bin";
+          };
+        };
+        config = {
+          # ...
+        };
+      }
+    )
   ];
   # WARN: This is just for testing and demostrating, you SHOULD NOT set this option
   # WARN: This is just for testing and demostrating, you SHOULD NOT set this option
@@ -30,17 +54,19 @@
     }
   ];
 
+  # eliminate size
+  services.lvm.enable = false;
+  security.sudo.enable = false;
+  users.allowNoPasswordLogin = true;
+  documentation.man.enable = lib.mkForce false;
+
   boot.kernelPackages = pkgs.linuxPackages_latest;
 
-  users.mutableUsers = false;
+  # users.mutableUsers = false;
 
-  systemd.network.enable = true;
-  services.resolved.enable = true;
-
-  systemd.network.networks.eth0 = {
-    matchConfig.Name = "eth0";
-    DHCP = "yes";
-  };
+  # systemd.network.enable = false;
+  # services.resolved.enable = false;
+  # networking.networkmanager.enable = false;
 
   networking.useNetworkd = true;
 
