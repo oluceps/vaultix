@@ -13,7 +13,7 @@ use crate::{
         secret_buf::{Plain, SecBuf},
         stored::{InStore, SecMap, SecPath},
     },
-    profile::{self, HostKey, Profile},
+    profile::{self, DeployFactor, HostKey, Profile},
 };
 
 use crate::helper::parse_recipient::RawRecip;
@@ -38,15 +38,10 @@ const KEY_TYPE: &str = "ed25519";
 fn deploy_to_fs(
     ctx: SecBuf<Plain>,
     item: impl crate::profile::DeployFactor,
-    generation_count: usize,
-    target_dir_ordered: PathBuf,
+    dst: PathBuf,
 ) -> Result<()> {
-    info!("{} -> generation {}", item.get_name(), generation_count);
     let mut the_file = {
-        let mut p = target_dir_ordered.clone();
-        p.push(item.get_name().clone());
-
-        let mode = crate::parser::parse_octal_str(item.get_mode())
+        let mode = crate::parser::parse_octal_str(item.mode())
             .map_err(|e| eyre!("parse octal permission err: {}", e))?;
         let permissions = Permissions::from_mode(mode);
 
@@ -54,11 +49,11 @@ fn deploy_to_fs(
             .create(true)
             .truncate(true)
             .write(true)
-            .open(p)?;
+            .open(dst)?;
 
         file.set_permissions(permissions)?;
 
-        helper::set_owner_group::set_owner_and_group(&file, item.get_owner(), item.get_group())?;
+        helper::set_owner_group::set_owner_and_group(&file, item.owner(), item.group())?;
 
         file
     };
@@ -185,18 +180,47 @@ impl Profile {
                         .expect("set permission");
                 })?
         };
+        macro_rules! generate_dst {
+            ($obj:expr, $settings:expr, $target_extract_dir:expr) => {{
+                let default_path = {
+                    let mut p: PathBuf = $settings.decrypted_dir.clone().into();
+                    p.push($obj.name());
+                    p
+                };
+                if PathBuf::from($obj.path()) == default_path {
+                    let mut ret = $target_extract_dir.clone();
+                    ret.push($obj.name());
+                    ret
+                } else {
+                    if PathBuf::from($obj.path()).starts_with(&default_path) {
+                        spdlog::warn!(
+                            "extract to decryptedDir detected. recommend specify `name` instead of `path`."
+                        );
+                    }
+                    info!("specified decrypt path detected");
+                    $obj.path().into()
+                }
+            }};
+        }
 
         // deploy general secrets
-        plain_map.inner_ref().iter().for_each(|(n, c)| {
-            let ctx = SecBuf::<Plain>::new(c.clone());
-            deploy_to_fs(
-                ctx,
-                *n,
-                generation_count,
-                target_extract_dir_with_gen.clone(),
-            )
-            .expect("err");
-        });
+        plain_map
+            .inner_ref()
+            .iter()
+            .map(|(n, c)| {
+                let ctx = SecBuf::<Plain>::new(c.clone());
+                let item = n as &dyn DeployFactor;
+                let dst: PathBuf = generate_dst!(item, self.settings, target_extract_dir_with_gen);
+
+                info!("secret {} -> {}", item.name(), dst.display(),);
+
+                deploy_to_fs(ctx, *n, dst)
+            })
+            .for_each(|res| {
+                if let Err(e) = res {
+                    error!("{}", e);
+                }
+            });
 
         if !self.templates.is_empty() {
             info!("start deploy templates");
@@ -215,41 +239,47 @@ impl Profile {
                 .map(|(k, v)| (get_hashed_id(k), v))
                 .collect();
 
-            self.templates.clone().iter().for_each(|(_, t)| {
-                let mut template = t.content.clone();
-                let hashstrs_of_it = t.parse_hash_str_list().expect("parse template");
+            self.templates
+                .values()
+                .map(|t| {
+                    let mut template = t.content.clone();
+                    let hashstrs_of_it = t.parse_hash_str_list().expect("parse template");
 
-                let trim_the_insertial = t.trim;
+                    let trim_the_insertial = t.trim;
 
-                hashstr_ctx_map
-                    .iter()
-                    .filter(|(k, _)| hashstrs_of_it.contains(k))
-                    .for_each(|(k, v)| {
-                        // render and insert
-                        trace!("template before process: {}", template);
+                    hashstr_ctx_map
+                        .iter()
+                        .filter(|(k, _)| hashstrs_of_it.contains(k))
+                        .for_each(|(k, v)| {
+                            // render and insert
+                            trace!("template before process: {}", template);
 
-                        let raw_composed_insertial = String::from_utf8_lossy(v).to_string();
+                            let raw_composed_insertial = String::from_utf8_lossy(v).to_string();
 
-                        let insertial = if trim_the_insertial {
-                            raw_composed_insertial.trim()
-                        } else {
-                            raw_composed_insertial.as_str()
-                        };
+                            let insertial = if trim_the_insertial {
+                                raw_composed_insertial.trim()
+                            } else {
+                                raw_composed_insertial.as_str()
+                            };
 
-                        template = template.replace(
-                            format!("{{{{ {} }}}}", hex::encode(k.as_slice())).as_str(),
-                            insertial,
-                        );
-                    });
+                            template = template.replace(
+                                format!("{{{{ {} }}}}", hex::encode(k.as_slice())).as_str(),
+                                insertial,
+                            );
+                        });
 
-                deploy_to_fs(
-                    SecBuf::<Plain>::new(template.into_bytes()),
-                    t,
-                    generation_count,
-                    target_extract_dir_with_gen.clone(),
-                )
-                .expect("extract template to target generation")
-            });
+                    let item = &t as &dyn DeployFactor;
+
+                    let dst = generate_dst!(item, self.settings, target_extract_dir_with_gen);
+
+                    info!("template {} -> {}", item.name(), dst.display(),);
+                    deploy_to_fs(SecBuf::<Plain>::new(template.into_bytes()), t, dst)
+                })
+                .for_each(|res| {
+                    if let Err(e) = res {
+                        error!("{}", e);
+                    }
+                });
         }
 
         // link back to /run/vaultix

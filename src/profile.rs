@@ -21,7 +21,6 @@ pub struct Secret {
     pub name: String,
     pub owner: String,
     pub path: String,
-    pub symlink: bool,
 }
 
 #[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq, Default)]
@@ -33,7 +32,6 @@ pub struct Template {
     pub mode: String,
     pub owner: String,
     pub path: String,
-    pub symlink: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -54,17 +52,18 @@ pub struct HostKey {
 }
 
 pub trait DeployFactor {
-    fn get_mode(&self) -> &String;
-    fn get_owner(&self) -> &String;
-    fn get_name(&self) -> &String;
-    fn get_group(&self) -> &String;
+    fn mode(&self) -> &String;
+    fn owner(&self) -> &String;
+    fn name(&self) -> &String;
+    fn group(&self) -> &String;
+    fn path(&self) -> &String;
 }
 
 macro_rules! impl_deploy_factor {
-    ($type:ty, { $($method:ident => $field:ident),+ $(,)? }) => {
+    ($type:ty, [ $($field:ident),+ $(,)? ]) => {
         impl DeployFactor for $type {
             $(
-                fn $method(&self) -> &String {
+                fn $field(&self) -> &String {
                     &self.$field
                 }
             )+
@@ -72,15 +71,6 @@ macro_rules! impl_deploy_factor {
     };
 }
 
-impl_deploy_factor!(&Secret, {
-    get_mode => mode,
-    get_owner => owner,
-    get_name => name,
-    get_group => group
-});
-impl_deploy_factor!(&Template, {
-    get_mode => mode,
-    get_owner => owner,
-    get_name => name,
-    get_group => group
-});
+impl_deploy_factor!(&Secret, [mode, owner, name, group, path]);
+
+impl_deploy_factor!(&Template, [mode, owner, name, group, path]);
