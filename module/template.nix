@@ -75,9 +75,6 @@ let
           Group of the built template.
         '';
       };
-      symlink = mkEnableOption "symlinking template to destination" // {
-        default = true;
-      };
     };
   });
 

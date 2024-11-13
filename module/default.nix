@@ -159,9 +159,6 @@ let
           Group of the decrypted secret.
         '';
       };
-      symlink = mkEnableOption "symlinking secrets to destination" // {
-        default = true;
-      };
     };
   });
 in
