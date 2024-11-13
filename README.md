@@ -51,7 +51,7 @@ outputs = inputs@{ flake-parts, self, ... }:
       identity =
         # See https://github.com/str4d/age-plugin-yubikey
         # Also supports age native secrets (recommend protected with passphrase)
-        (self + "/secret/age-yubikey-identity-0000ffff.txt.pub");
+        "/home/user/where/age-yubikey-identity-0000ffff.txt.pub";
 
       extraRecipients =
         # Optional. Backup keys
