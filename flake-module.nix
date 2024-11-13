@@ -22,11 +22,19 @@ in
             cache = mkOption {
               type = types.addCheck types.str (s: (builtins.substring 0 1 s) == ".");
               default = "./secrets/cache";
+              defaultText = lib.literalExpression "./secrets/cache";
+              description = ''
+                `path str` that relative to flake root, used for storing host public key
+                re-encrypted secrets.
+              '';
             };
             nodes = mkOption {
               type = types.lazyAttrsOf types.unspecified;
               default = self.nixosConfigurations;
               defaultText = lib.literalExpression "self.nixosConfigurations";
+              description = ''
+                nixos systems that vaultix to manage.
+              '';
             };
             identity = mkOption {
               type =
@@ -37,6 +45,11 @@ in
                 nullOr identityPathType;
               default = null;
               example = ./password-encrypted-identity.pub;
+              description = ''
+                `Age identity file`.
+                Able to use yubikey, see <https://github.com/str4d/age-plugin-yubikey>.
+                Supports age native secrets (recommend protected with passphrase)
+              '';
             };
             extraRecipients = mkOption {
               type = with types; listOf (coercedTo path toString str);
@@ -44,6 +57,10 @@ in
               example = [
                 "age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs3290gq"
               ];
+              description = ''
+                Recipients used for backup. Any of identity of them will able
+                to decrypt all secrets.
+              '';
             };
             app = mkOption {
               type = types.lazyAttrsOf (types.lazyAttrsOf types.package);
@@ -71,10 +88,19 @@ in
                   )
               ) config.allSystems;
               readOnly = true;
+              defaultText = "Auto generate by flake module";
+              description = ''
+                vaultix apps that auto generate by its flake module.
+                Run manually with `nix run .#vaultix.app.$system.<app-name>`
+              '';
             };
           };
         });
         default = { };
+        description = ''
+          A single-admin secret manage scheme for nixos, with support of templates and
+          agenix-like secret configuration layout.
+        '';
       };
     };
 
@@ -90,6 +116,9 @@ in
             type = types.unspecified;
             default = pkgs;
             defaultText = lib.literalExpression "pkgs";
+            description = ''
+              pkgs that passed into vaultix apps.
+            '';
           };
         };
       }

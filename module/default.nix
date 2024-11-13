@@ -35,13 +35,18 @@ let
         default = builtins.path {
           path = "/" + self + "/" + self.vaultix.cache + "/" + config.networking.hostName;
         };
+        defaultText = literalExpression "path in store";
+        description = ''
+          Secrets re-encrypted by each host public key. In nix store.
+        '';
       };
 
       decryptedDir = mkOption {
         type = types.path;
         default = "/run/vaultix";
+        defaultText = literalExpression "/run/vaultix";
         description = ''
-          Folder where secrets are symlinked to
+          Folder where secrets are symlinked to.
         '';
       };
 
@@ -59,15 +64,28 @@ let
           }
         );
         default = config.services.openssh.hostKeys;
+        defaultText = literalExpression "config.services.openssh.hostKeys";
         readOnly = true;
         description = ''
-          `config.services.openssh.hostKeys`
+          Ed25519 host private ssh key (identity) path that used for decrypting secrets while deploying.
+          Default is `config.services.openssh.hostKeys`.
+
+          Default format:
+          ```nix
+          [
+            {
+              path = "/path/to/ssh_host_ed25519_key";
+              type = "ed25519";
+            }
+          ]
+          ```
         '';
       };
 
       hostIdentifier = mkOption {
         type = types.str;
         default = config.networking.hostName;
+        defaultText = literalExpression "config.networking.hostName";
         readOnly = true;
         description = ''
           Host identifier
@@ -85,6 +103,7 @@ let
             description = "${types.str.description} (with check: non-empty without trailing slash)";
           };
         default = "/run/vaultix.d";
+        defaultText = literalExpression "/run/vaultix.d";
         description = ''
           Where secrets are created before they are symlinked to {option}`vaultix.settings.decryptedDir`
         '';
@@ -92,14 +111,16 @@ let
 
       hostPubkey = mkOption {
         type = with types; coercedTo path (x: if isPath x then readFile x else x) str;
-        #example = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI.....";
-        #example = "age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs3290gq";
         example = literalExpression "./secrets/host1.pub";
-        #example = "/etc/ssh/ssh_host_ed25519_key.pub";
+        description = ''
+          str or path that contains host public key.
+          example:
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI....."
+          "age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpq....."
+          "/etc/ssh/ssh_host_ed25519_key.pub"
+        '';
       };
-
     };
-
   });
 
   secretType = types.submodule (submod: {
