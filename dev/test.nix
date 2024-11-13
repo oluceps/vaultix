@@ -48,6 +48,7 @@
                       mode = "400";
                       owner = "root";
                       group = "users";
+                      # path = "/home/1.txt";
                     };
 
                     # template example
@@ -56,7 +57,7 @@
                       content = ''
                         for testing vaultix template ${config.vaultix.placeholder.test-secret-1} nya
                       '';
-                      # path = "/home/user/template.txt";
+                      path = "/var/template.txt";
                     };
 
                   };
