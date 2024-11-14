@@ -50,6 +50,14 @@
                       group = "users";
                       # path = "/home/1.txt";
                     };
+                    secrets.test-secret-2 = {
+                      file = ./secrets/there-is-a-secret.age;
+                      mode = "400";
+                      owner = "root";
+                      group = "users";
+                      path = "/home/1.txt";
+                      neededForUser = true;
+                    };
 
                     # template example
                     templates.template-test = {
@@ -63,7 +71,7 @@
                   };
 
                   # for vm testing log
-                  systemd.services.vaultix-install-secrets.serviceConfig.Environment = [ "SPDLOG_RS_LEVEL=trace" ];
+                  systemd.services.vaultix-activate.serviceConfig.Environment = [ "SPDLOG_RS_LEVEL=trace" ];
                 }
               )
 

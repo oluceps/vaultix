@@ -20,7 +20,9 @@ in
         type = types.submodule (submod: {
           options = {
             cache = mkOption {
-              type = types.addCheck types.str (s: (builtins.substring 0 1 s) == ".");
+              type = types.addCheck types.str (s: (builtins.substring 0 1 s) == ".") // {
+                description = "path string relative to flake root";
+              };
               default = "./secrets/cache";
               defaultText = lib.literalExpression "./secrets/cache";
               description = ''

@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     fs::{self, OpenOptions, Permissions, ReadDir},
-    io::{ErrorKind, Write},
+    io::{self, ErrorKind, Write},
     os::unix::fs::PermissionsExt,
     path::PathBuf,
     rc::Rc,
@@ -13,12 +13,14 @@ use crate::{
         secret_buf::{Plain, SecBuf},
         stored::{InStore, SecMap, SecPath},
     },
-    profile::{self, DeployFactor, HostKey, Profile},
+    profile::{DeployFactor, HostKey, Profile},
 };
 
 use crate::helper::parse_recipient::RawRecip;
 use age::Recipient;
-use eyre::{eyre, Context, Result};
+use eyre::{eyre, Context, ContextCompat, Result};
+use hex::decode;
+use lib::extract_all_hashes;
 use spdlog::{debug, error, info, trace};
 use sys_mount::{Mount, MountFlags, SupportedFilesystems};
 
@@ -67,6 +69,9 @@ impl Profile {
     }
     pub fn get_decrypt_dir_path(&self) -> String {
         self.settings.decrypted_dir.to_string()
+    }
+    pub fn get_decrypt_dir_path_for_user(&self) -> String {
+        self.settings.decrypted_dir_for_user.to_string()
     }
     pub fn read_decrypted_mount_point(&self) -> std::io::Result<ReadDir> {
         fs::read_dir(self.get_decrypted_mount_point_path())
@@ -224,19 +229,20 @@ impl Profile {
 
         if !self.templates.is_empty() {
             info!("start deploy templates");
-            use sha2::{Digest, Sha256};
 
-            let get_hashed_id = |s: &profile::Secret| -> Vec<u8> {
-                let mut hasher = Sha256::new();
-                hasher.update(s.id.as_str());
-                hasher.finalize().to_vec()
-            };
-
-            // new map with sha256 hashed secret id str as key, ctx as value
-            let hashstr_ctx_map: HashMap<Vec<u8>, &Vec<u8>> = plain_map
+            // new map with {{ hash }} String as key, ctx as value
+            let hashstr_ctx_map: HashMap<&str, &Vec<u8>> = plain_map
                 .inner_ref()
                 .iter()
-                .map(|(k, v)| (get_hashed_id(k), v))
+                .map(|(k, v)| {
+                    self.placeholder
+                        .get_braced_from_id(k.id.as_str())
+                        .wrap_err_with(|| {
+                            eyre!("secrets corresponding to the template placeholder id not found")
+                        })
+                        .map(|i| (i, v))
+                        .expect("found secret from placeholder id")
+                })
                 .collect();
 
             self.templates
@@ -249,7 +255,12 @@ impl Profile {
 
                     hashstr_ctx_map
                         .iter()
-                        .filter(|(k, _)| hashstrs_of_it.contains(k))
+                        .filter(|(k, _)| {
+                            let mut v = Vec::new();
+                            extract_all_hashes(k, &mut v);
+                            hashstrs_of_it
+                                .contains(&decode(v.first().expect("only one")).expect("decoded"))
+                        })
                         .for_each(|(k, v)| {
                             // render and insert
                             trace!("template before process: {}", template);
@@ -262,10 +273,7 @@ impl Profile {
                                 raw_composed_insertial.as_str()
                             };
 
-                            template = template.replace(
-                                format!("{{{{ {} }}}}", hex::encode(k.as_slice())).as_str(),
-                                insertial,
-                            );
+                            template = template.replace(k, insertial);
                         });
 
                     let item = &t as &dyn DeployFactor;
@@ -282,13 +290,24 @@ impl Profile {
                 });
         }
 
-        // link back to /run/vaultix
-        if std::os::unix::fs::symlink(target_extract_dir_with_gen, self.get_decrypt_dir_path())
-            .wrap_err("create symlink error")
-            .is_ok()
-        {
-            info!("deployment success");
+        let symlink_dst = if self.secrets.values().any(|i| i.needed_for_user) {
+            self.get_decrypt_dir_path_for_user()
+        } else {
+            self.get_decrypt_dir_path()
+        };
+        info!(
+            "link decrypted dir {} to {}",
+            target_extract_dir_with_gen.display(),
+            symlink_dst.as_str()
+        );
+
+        match std::fs::remove_file(&symlink_dst) {
+            Err(e) if e.kind() == io::ErrorKind::NotFound => {}
+            Err(e) => Err(eyre!("{}", e))?,
+            Ok(_) => {}
         }
-        Ok(())
+        // link back to /run/vaultix*
+        std::os::unix::fs::symlink(target_extract_dir_with_gen, symlink_dst)
+            .wrap_err_with(|| "create symlink error")
     }
 }

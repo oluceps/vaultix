@@ -102,10 +102,6 @@
                 nativeBuildInputs = [
                   pkgs.rustPlatform.bindgenHook
                 ];
-                RUSTFLAGS = [
-                  "-Zlocation-detail=none"
-                  "-Zfmt-debug=none"
-                ];
                 cargoVendorDir = releaseCraneLib.vendorMultipleCargoDeps {
                   inherit (releaseCraneLib.findCargoFiles src) cargoConfigs;
                   cargoLockList = [

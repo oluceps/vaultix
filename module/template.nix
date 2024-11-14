@@ -75,6 +75,7 @@ let
           Group of the built template.
         '';
       };
+      neededForUser = mkEnableOption { };
     };
   });
 

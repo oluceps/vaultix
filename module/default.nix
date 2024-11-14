@@ -10,10 +10,12 @@ let
   inherit (lib)
     types
     mkOption
+    filterAttrs
     isPath
     readFile
     literalMD
     warn
+    mkEnableOption
     literalExpression
     mkIf
     assertMsg
@@ -61,6 +63,34 @@ let
         '';
       };
 
+      decryptedDirForUser = mkOption {
+        type = types.path;
+        default = "/run/vaultix-for-user";
+        defaultText = literalExpression "/run/vaultix-for-user";
+        description = ''
+          Folder where decrypted secrets for user are symlinked to.
+          Secrets for user means it decrypt and extract before users
+          created.
+        '';
+      };
+
+      decryptedMountPoint = mkOption {
+        type =
+          types.addCheck types.str (
+            s:
+            (builtins.match "[ \t\n]*" s) == null # non-empty
+            && (builtins.match ".+/" s) == null
+          ) # without trailing slash
+          // {
+            description = "${types.str.description} (with check: non-empty without trailing slash)";
+          };
+        default = "/run/vaultix.d";
+        defaultText = literalExpression "/run/vaultix.d";
+        description = ''
+          Where secrets are created before they are symlinked to {option}`vaultix.settings.decryptedDir`
+        '';
+      };
+
       hostKeys = mkOption {
         type = types.listOf (
           types.submodule {
@@ -102,24 +132,6 @@ let
           Host identifier
         '';
       };
-
-      decryptedMountPoint = mkOption {
-        type =
-          types.addCheck types.str (
-            s:
-            (builtins.match "[ \t\n]*" s) == null # non-empty
-            && (builtins.match ".+/" s) == null
-          ) # without trailing slash
-          // {
-            description = "${types.str.description} (with check: non-empty without trailing slash)";
-          };
-        default = "/run/vaultix.d";
-        defaultText = literalExpression "/run/vaultix.d";
-        description = ''
-          Where secrets are created before they are symlinked to {option}`vaultix.settings.decryptedDir`
-        '';
-      };
-
       hostPubkey = mkOption {
         type = with types; coercedTo path (x: if isPath x then readFile x else x) str;
         example = literalExpression "./secrets/host1.pub";
@@ -158,7 +170,11 @@ let
       };
       path = mkOption {
         type = types.str;
-        default = "${cfg.settings.decryptedDir}/${submod.config.name}";
+        default =
+          if submod.config.neededForUser then
+            "${cfg.settings.decryptedDirForUser}/${submod.config.name}"
+          else
+            "${cfg.settings.decryptedDir}/${submod.config.name}";
         defaultText = literalExpression ''
           "''${cfg.settings.decryptedDir}/''${config.name}"
         '';
@@ -190,6 +206,7 @@ let
           Group of the decrypted secret.
         '';
       };
+      neededForUser = mkEnableOption { };
     };
   });
 in
@@ -224,28 +241,71 @@ in
 
   config =
     let
-      profile = pkgs.writeTextFile {
-        name = "secret-meta-${config.networking.hostName}";
-        text = builtins.toJSON cfg;
-      };
+      mkProfile =
+        partial:
+        pkgs.writeTextFile {
+          name = "secret-meta-${config.networking.hostName}";
+          text = builtins.toJSON partial;
+        };
+      whatIfPreUser = what: need: filterAttrs (_: v: v.neededForUser == need) what;
+
+      secretsPreUser = whatIfPreUser cfg.secrets true;
+      templatesPreUser = whatIfPreUser cfg.templates true;
+
+      regularSecrets = whatIfPreUser cfg.secrets false;
+      regularTemplates = whatIfPreUser cfg.templates false;
+
+      profilePreUser = mkProfile (
+        cfg
+        // {
+          secrets = secretsPreUser;
+          templates = templatesPreUser;
+        }
+      );
+      profileRegular = mkProfile (
+        cfg
+        // {
+          secrets = regularSecrets;
+          templates = regularTemplates;
+        }
+      );
+
       checkRencSecsReport =
         pkgs.runCommandNoCCLocal "secret-check-report" { }
-          "${lib.getExe cfg.package} -p ${profile} check > $out";
+          "${lib.getExe cfg.package} -p ${mkProfile cfg} check > $out";
     in
-    mkIf sysusers {
-      systemd.services.vaultix-install-secrets = {
-        wantedBy = [ "sysinit.target" ];
-        after = [ "systemd-sysusers.service" ];
-        unitConfig.DefaultDependencies = "no";
-        serviceConfig = {
-          Type = "oneshot";
-          Environment = [
-            cfg.settings.cacheInStore
-            checkRencSecsReport
-          ];
-          ExecStart = "${lib.getExe cfg.package} -p ${profile} deploy";
-          RemainAfterExit = true;
+    mkIf sysusers (
+      let
+        deployRequisits = [
+          ("CACHE=" + cfg.settings.cacheInStore)
+          ("CHECK_RESULT=" + checkRencSecsReport)
+        ];
+      in
+      {
+        systemd.services.vaultix-activate = {
+          wantedBy = [ "sysinit.target" ];
+          after = [ "systemd-sysusers.service" ];
+          unitConfig.DefaultDependencies = "no";
+          serviceConfig = {
+            Type = "oneshot";
+            Environment = deployRequisits;
+            ExecStart = "${lib.getExe cfg.package} -p ${profileRegular} deploy";
+            RemainAfterExit = true;
+          };
         };
-      };
-    };
+
+        systemd.services.vaultix-activate-before-user = {
+          wantedBy = [ "systemd-sysusers.service" ];
+          before = [ "systemd-sysusers.service" ];
+          unitConfig.DefaultDependencies = "no";
+
+          serviceConfig = {
+            Type = "oneshot";
+            Environment = deployRequisits;
+            ExecStart = "${lib.getExe cfg.package} -p ${profilePreUser} deploy";
+            RemainAfterExit = true;
+          };
+        };
+      }
+    );
 }

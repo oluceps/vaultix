@@ -10,9 +10,14 @@ pub struct Profile {
     pub secrets: SecretSet,
     pub settings: Settings,
     pub templates: TemplateSet,
+    pub placeholder: PlaceHolderSet,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct PlaceHolderSet(pub HashMap<String, String>);
+
 #[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct Secret {
     pub id: String,
     pub file: String,
@@ -21,9 +26,11 @@ pub struct Secret {
     pub name: String,
     pub owner: String,
     pub path: String,
+    pub needed_for_user: bool,
 }
 
 #[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct Template {
     pub name: String,
     pub content: String,
@@ -38,6 +45,7 @@ pub struct Template {
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
     pub decrypted_dir: String,
+    pub decrypted_dir_for_user: String,
     pub decrypted_mount_point: String,
     pub host_identifier: String,
     pub host_pubkey: String,
