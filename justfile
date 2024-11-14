@@ -13,3 +13,8 @@ clean-exist-deploy:
     sudo umount /run/vaultix.d
     sudo rm -r /run/vaultix.d
     sudo rm -r /run/vaultix
+full-test:
+    #!/usr/bin/env nu
+    cargo test
+    cargo fuzz run --all-features fuzz_parser_1 -- -max_len=256 -runs=16777216
+    nix run github:nix-community/nixos-anywhere -- --flake .#tester --vm-test
