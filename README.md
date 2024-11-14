@@ -6,6 +6,7 @@
 ![CI state clippy](https://github.com/oluceps/vaultix/actions/workflows/clippy.yaml/badge.svg)
 ![CI state fuzz](https://github.com/oluceps/vaultix/actions/workflows/fuzz.yaml/badge.svg)
 ![CI state statix](https://github.com/oluceps/vaultix/actions/workflows/statix.yaml/badge.svg)
+![CI state doc](https://github.com/oluceps/vaultix/actions/workflows/doc.yaml/badge.svg)
 
 Secret management for NixOS.
 
