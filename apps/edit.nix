@@ -10,7 +10,11 @@ let
   inherit (pkgs.lib) concatStringsSep;
 
   bin = pkgs.lib.getExe package;
-  recipientsArg = concatStringsSep " " extraRecipients;
+  recipientsArg =
+    if extraRecipients != [ ] then
+      "--recipients" + " " + (concatStringsSep " " extraRecipients)
+    else
+      "";
 
 in
-writeShellScriptBin "edit-secret" "${bin} edit --identity ${identity} --recipients ${recipientsArg} $1"
+writeShellScriptBin "edit-secret" "${bin} edit --identity ${identity} ${recipientsArg} $1"

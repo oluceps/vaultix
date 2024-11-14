@@ -1,6 +1,6 @@
 use std::{fs, path::PathBuf};
 
-use eyre::Context;
+use eyre::{eyre, Context, ContextCompat};
 use spdlog::prelude::*;
 use {argh::FromArgs, std::fmt::Debug};
 
@@ -16,7 +16,7 @@ pub struct Args {
     app: SubCmd,
     #[argh(option, short = 'p')]
     /// secret profile
-    profile: String,
+    profile: Option<String>,
     #[argh(option, short = 'f')]
     /// toplevel of flake repository
     flake_root: Option<String>,
@@ -74,7 +74,11 @@ impl Args {
         use super::profile::Profile;
 
         let profile = || -> eyre::Result<Profile> {
-            let file = fs::read_to_string(&self.profile)
+            let file = self
+                .profile
+                .clone()
+                .wrap_err_with(|| eyre!("this cmd requires provide profile"))
+                .and_then(|p| fs::read_to_string(p).wrap_err_with(|| eyre!("read file error")))
                 .wrap_err_with(|| eyre::eyre!("read profile error"))
                 .wrap_err("arg `profile` not found")?;
             serde_json::from_str(file.as_str()).wrap_err_with(|| eyre::eyre!("parse profile fail"))

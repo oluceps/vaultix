@@ -50,7 +50,7 @@ pub fn edit(arg: EditSubCmd) -> eyre::Result<()> {
             let edited = edit::edit(buf)?;
 
             if blake3::hash(edited.as_bytes()) == pre_hash {
-                info!("file unchanged");
+                info!("file unchange");
                 return Ok(());
             }
 

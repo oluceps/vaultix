@@ -13,6 +13,7 @@ let
     isPath
     readFile
     literalMD
+    warn
     literalExpression
     mkIf
     assertMsg
@@ -32,9 +33,19 @@ let
       cacheInStore = mkOption {
         type = types.path;
         readOnly = true;
-        default = builtins.path {
-          path = "/" + self + "/" + self.vaultix.cache + "/" + config.networking.hostName;
-        };
+        default =
+          let
+            cachePath = "/" + self + "/" + self.vaultix.cache + "/" + config.networking.hostName;
+          in
+          if builtins.pathExists cachePath then
+            builtins.path {
+              path = cachePath;
+            }
+          else
+            warn ''
+              path not exist: ${cachePath}; Will auto create if you're running `renc`, else the build will fail.
+            '' pkgs.emptyDirectory;
+
         defaultText = literalExpression "path in store";
         description = ''
           Secrets re-encrypted by each host public key. In nix store.

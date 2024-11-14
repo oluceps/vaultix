@@ -9,10 +9,6 @@
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    pre-commit-hooks = {
-      url = "github:cachix/pre-commit-hooks.nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
   outputs =
@@ -32,10 +28,33 @@
         };
       in
       {
-        imports = with inputs; [
-          pre-commit-hooks.flakeModule
-          flakeModules.default
-        ];
+        partitionedAttrs = {
+          checks = "dev";
+          nixosConfigurations = "dev";
+          vaultix = "dev";
+        };
+        partitions = {
+          dev.extraInputsFlake = ./dev;
+          dev.module =
+            { inputs, ... }:
+            {
+              imports = [
+                inputs.pre-commit-hooks.flakeModule
+                flakeModules.default
+                ./dev/pre-commit-hooks.nix
+                ./dev/test.nix
+              ];
+            };
+        };
+
+        imports =
+          let
+            inherit (inputs) flake-parts;
+          in
+          [
+            flake-parts.flakeModules.easyOverlay
+            flake-parts.flakeModules.partitions
+          ];
         systems = [
           "x86_64-linux"
           "aarch64-linux"
@@ -45,22 +64,22 @@
             self',
             pkgs,
             system,
+            config,
             ...
           }:
           let
-            target =
-              if system == "x86_64-linux" then
-                "x86_64-unknown-linux-gnu"
-              else if system == "aarch64-linux" then
-                "aarch64-unknown-linux-gnu"
-              else
-                throw "unsupported platform";
-            toolchain = pkgs.rust-bin.nightly.latest.minimal.override {
-              extensions = [ "rust-src" ];
-              targets = [ target ];
-            };
-            craneLib = (crane.mkLib pkgs).overrideToolchain toolchain;
-            inherit (craneLib) buildPackage;
+            target = (pkgs.lib.systems.elaborate system).config;
+            mkOverridedToolchain =
+              scale:
+              scale.override {
+                extensions = [ "rust-src" ];
+                targets = [ target ];
+              };
+            mkCraneLib = toolchain: (crane.mkLib pkgs).overrideToolchain toolchain;
+            releaseToolChain = mkOverridedToolchain pkgs.rust-bin.nightly.latest.minimal;
+            releaseCraneLib = mkCraneLib releaseToolChain;
+            devCraneLib = mkCraneLib (mkOverridedToolchain pkgs.rust-bin.nightly.latest.complete);
+            inherit (releaseCraneLib) buildPackage;
           in
           {
             _module.args.pkgs = import inputs.nixpkgs {
@@ -79,7 +98,7 @@
 
             packages = rec {
               default = buildPackage rec {
-                src = craneLib.cleanCargoSource ./.;
+                src = releaseCraneLib.cleanCargoSource ./.;
                 nativeBuildInputs = [
                   pkgs.rustPlatform.bindgenHook
                 ];
@@ -87,8 +106,8 @@
                   "-Zlocation-detail=none"
                   "-Zfmt-debug=none"
                 ];
-                cargoVendorDir = craneLib.vendorMultipleCargoDeps {
-                  inherit (craneLib.findCargoFiles src) cargoConfigs;
+                cargoVendorDir = releaseCraneLib.vendorMultipleCargoDeps {
+                  inherit (releaseCraneLib.findCargoFiles src) cargoConfigs;
                   cargoLockList = [
                     ./Cargo.lock
 
@@ -100,7 +119,7 @@
                     # to the repo and import it with `./path/to/rustlib/Cargo.lock` which
                     # will avoid IFD entirely but will require manually keeping the file
                     # up to date!
-                    "${toolchain.passthru.availableComponents.rust-src}/lib/rustlib/src/rust/library/Cargo.lock"
+                    "${releaseToolChain.passthru.availableComponents.rust-src}/lib/rustlib/src/rust/library/Cargo.lock"
                   ];
                 };
 
@@ -109,10 +128,11 @@
               };
               vaultix = default;
             };
+            overlayAttrs = config.packages;
 
             formatter = pkgs.nixfmt-rfc-style;
 
-            devShells.default = craneLib.devShell {
+            devShells.default = devCraneLib.devShell {
               inputsFrom = [
                 pkgs.vaultix
               ];
@@ -123,28 +143,20 @@
               ];
             };
 
-            pre-commit = {
-              check.enable = true;
-              settings.hooks = {
-                nixfmt-rfc-style.enable = true;
-              };
-            };
-
           };
         flake = {
           inherit flakeModules;
-
-          overlays.default = final: prev: {
-            vaultix = inputs.self.packages.${prev.system}.default;
+          nixosModules = rec {
+            default =
+              { pkgs, ... }:
+              {
+                imports = [ ./module ];
+                vaultix.package = withSystem pkgs.stdenv.hostPlatform.system (
+                  { config, ... }: config.packages.vaultix
+                );
+              };
+            vaultix = default;
           };
-          nixosModules.default =
-            { pkgs, ... }:
-            {
-              imports = [ ./module ];
-              vaultix.package = withSystem pkgs.stdenv.hostPlatform.system (
-                { config, ... }: config.packages.vaultix
-              );
-            };
         };
       }
     );
