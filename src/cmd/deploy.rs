@@ -259,6 +259,7 @@ impl Profile {
                             let mut v = Vec::new();
                             extract_all_hashes(k, &mut v);
                             hashstrs_of_it
+                                // promised by nixos module
                                 .contains(&decode(v.first().expect("only one")).expect("decoded"))
                         })
                         .for_each(|(k, v)| {
