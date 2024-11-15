@@ -2,9 +2,9 @@
 
 - [Intro](./intro.md)
 - [Prerequisits](./prerequisits.md)
-- [setup](./setup.md)
-  - [flake Option](./flake-option.md)
-  - [nixos Option](./nixos-option.md)
+- [Setup](./setup.md)
+  - [Flake Option](./flake-option.md)
+  - [NixOS Option](./nixos-option.md)
 - [Nix Apps](./nix-apps.md)
 - [Workflow](./workflow.md)
 - [Development](./develop.md)
