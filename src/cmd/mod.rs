@@ -61,7 +61,11 @@ pub struct EditSubCmd {
 #[derive(FromArgs, PartialEq, Debug)]
 /// Decrypt and deploy cipher credentials
 #[argh(subcommand, name = "deploy")]
-pub struct DeploySubCmd {}
+pub struct DeploySubCmd {
+    #[argh(switch, short = 'e')]
+    /// deploy for user
+    early: bool,
+}
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// Check secret status
@@ -96,10 +100,10 @@ impl Args {
                 let profile = profile()?;
                 profile.renc(flake_root, identity.clone(), cache.into())
             }
-            SubCmd::Deploy(DeploySubCmd {}) => {
+            SubCmd::Deploy(DeploySubCmd { early }) => {
                 info!("deploying secrets");
                 let profile = profile()?;
-                profile.deploy()
+                profile.deploy(*early)
             }
             SubCmd::Edit(e) => {
                 info!("editing secrets");

@@ -6,10 +6,12 @@ pub type SecretSet = HashMap<String, Secret>;
 pub type TemplateSet = HashMap<String, Template>;
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Profile {
-    pub secrets: SecretSet,
     pub settings: Settings,
+    pub secrets: SecretSet,
     pub templates: TemplateSet,
+    pub need_by_user: Vec<String>,
     pub placeholder: PlaceHolderSet,
 }
 
@@ -26,7 +28,6 @@ pub struct Secret {
     pub name: String,
     pub owner: String,
     pub path: String,
-    pub needed_for_user: bool,
 }
 
 #[derive(Debug, Deserialize, Clone, Hash, Eq, PartialEq, Default)]

@@ -13,7 +13,7 @@ use spdlog::{debug, trace};
 
 use crate::{
     helper::secret_buf::{AgeEnc, SecBuf},
-    profile::{self, SecretSet},
+    profile::{self, Secret, SecretSet},
 };
 use eyre::{eyre, Result};
 use std::marker::PhantomData;
@@ -93,6 +93,7 @@ macro_rules! impl_from_iterator_for_secmap {
         )*
     };
 }
+
 impl_from_iterator_for_secmap!(Vec<u8>, blake3::Hash, UniPath, SecBuf<HostEnc>);
 
 macro_rules! impl_from_for_secmap {
@@ -134,6 +135,12 @@ impl<T> SecMap<'_, SecPath<PathBuf, T>> {
     }
 }
 
+impl FromIterator<Secret> for SecMap<'_, SecPBWith<InStore>> {
+    fn from_iter<T: IntoIterator<Item = Secret>>(iter: T) -> Self {
+        iter.into_iter().collect()
+    }
+}
+
 impl<'a> SecMap<'a, SecPBWith<InStore>> {
     pub fn create(secrets: &'a SecretSet) -> Self {
         SecMap::<SecPBWith<InStore>>(
@@ -144,6 +151,16 @@ impl<'a> SecMap<'a, SecPBWith<InStore>> {
                     (s, secret_path)
                 })
                 .collect(),
+        )
+    }
+
+    pub fn from_iter(iter: impl Iterator<Item = &'a profile::Secret>) -> Self {
+        SecMap::<SecPBWith<InStore>>(
+            iter.map(|s| {
+                let secret_path = SecPath::<_, InStore>::new(PathBuf::from(s.file.clone()));
+                (s, secret_path)
+            })
+            .collect(),
         )
     }
 

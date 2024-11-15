@@ -42,6 +42,8 @@
                   vaultix = {
                     settings.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEu8luSFCts3g367nlKBrxMdLyOy4Awfo5Rb397ef2AR";
 
+                    needByUser = [ "test-secret-2" ];
+
                     # secret example
                     secrets.test-secret-1 = {
                       file = ./secrets/there-is-a-secret.age;
@@ -56,7 +58,6 @@
                       owner = "root";
                       group = "users";
                       path = "/home/1.txt";
-                      neededForUser = true;
                     };
 
                     # template example

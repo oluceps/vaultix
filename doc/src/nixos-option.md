@@ -11,6 +11,7 @@ Configurable option could be divided into 3 parts:
     settings = { ... };
     secrets = { ... };
     templates = { ... };
+    needByUser = [...];
   };
 }
 ```
@@ -93,7 +94,6 @@ secrets = {
     group = "users";
     name = "example.toml";
     path = "/some/place";
-    neededForUser = false;
   };
 };
 ```
@@ -101,7 +101,6 @@ secrets = {
 This part basically keeps identical with `agenix`. But has few diffs:
 
 + no `symlink: bool` option, since it has an systemd function called [tmpfiles.d](https://www.freedesktop.org/software/systemd/man/latest/tmpfiles.d.html).
-+ added `neededForUser: bool` option, for deploying secrets and templates that required before user init.
 
 ### path: path str
 
@@ -129,7 +128,6 @@ templates = {
     group = "users";
     name = "example.toml";
     path = "/some/place";
-    neededForUser = false;
   };
 }
 ```
@@ -141,6 +139,8 @@ templates = {
 To insert secrets in this string, insert `config.vaultix.placeholder.example`.
 
 This pretend the secret which `id` (the keyof attribute of secrets) was defined.
+
+<div id="id-state"></div>
 
 ```nix
 secrets = {
@@ -167,3 +167,10 @@ TO BE NOTICE that the source secret file may have trailing `\n`:
 default true;
 
 Removing trailing and leading whitespace by default.
+
+
+## needByUser: [str]
+
+For deploying secrets and templates that required before user init.
+
+List of [id](#id-state) of templates or secrets.
