@@ -52,9 +52,6 @@ Recipients used for backup. Any of identity of them will able to decrypt all sec
 
 > Changing this will not take effect to `renc` command output. The hash of host pub key re-encrypted filename is `blake3(encrypted secret content + host public key)`.
 
-I personally don't recommend setting this.
-
-
 ### cache =
 
 **String** of path that **relative** to flake root, used for storing host public key

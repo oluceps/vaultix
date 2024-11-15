@@ -144,7 +144,7 @@ This pretend the secret which `id` (the keyof attribute of secrets) was defined.
 
 ```nix
 secrets = {
-  # the id is example. despite `name`.
+  # the id is 'example'. despite `name`.
   example = {
     file = ./secret/example.age;
   };
