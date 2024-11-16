@@ -239,67 +239,69 @@ impl Profile {
             });
         info!("finish secrets deployment");
 
-        info!("start templates deployment");
-        // new map with {{ hash }} String as key, ctx as value
-        let hashstr_ctx_map: HashMap<&str, &Vec<u8>> = plain_map
-            .inner_ref()
-            .iter()
-            .map(|(k, v)| {
-                self.placeholder
-                    .get_braced_from_id(k.id.as_str())
-                    .wrap_err_with(|| {
-                        eyre!("secrets corresponding to the template placeholder id not found")
-                    })
-                    .map(|i| (i, v))
-                    .expect("found secret from placeholder id")
-            })
-            .collect();
+        if !self.templates.is_empty() {
+            info!("start templates deployment");
+            // new map with {{ hash }} String as key, ctx as value
+            let hashstr_ctx_map: HashMap<&str, &Vec<u8>> = plain_map
+                .inner_ref()
+                .iter()
+                .map(|(k, v)| {
+                    self.placeholder
+                        .get_braced_from_id(k.id.as_str())
+                        .wrap_err_with(|| {
+                            eyre!("secrets corresponding to the template placeholder id not found")
+                        })
+                        .map(|i| (i, v))
+                        .expect("found secret from placeholder id")
+                })
+                .collect();
 
-        templates_map_iter
-            .map(|(_, t)| {
-                let mut template = t.content.clone();
-                let hashstrs_of_it = t.parse_hash_str_list().expect("parse template");
+            templates_map_iter
+                .map(|(_, t)| {
+                    let mut template = t.content.clone();
+                    let hashstrs_of_it = t.parse_hash_str_list().expect("parse template");
 
-                let trim_the_insertial = t.trim;
+                    let trim_the_insertial = t.trim;
 
-                hashstr_ctx_map
-                    .iter()
-                    .filter(|(k, _)| {
-                        let mut v = Vec::new();
-                        extract_all_hashes(k, &mut v);
-                        hashstrs_of_it
-                            // promised by nixos module
-                            .contains(&decode(v.first().expect("only one")).expect("decoded"))
-                    })
-                    .for_each(|(k, v)| {
-                        // render and insert
-                        trace!("template before process: {}", template);
+                    hashstr_ctx_map
+                        .iter()
+                        .filter(|(k, _)| {
+                            let mut v = Vec::new();
+                            extract_all_hashes(k, &mut v);
+                            hashstrs_of_it
+                                // promised by nixos module
+                                .contains(&decode(v.first().expect("only one")).expect("decoded"))
+                        })
+                        .for_each(|(k, v)| {
+                            // render and insert
+                            trace!("template before process: {}", template);
 
-                        let raw_composed_insertial = String::from_utf8_lossy(v).to_string();
+                            let raw_composed_insertial = String::from_utf8_lossy(v).to_string();
 
-                        let insertial = if trim_the_insertial {
-                            raw_composed_insertial.trim()
-                        } else {
-                            raw_composed_insertial.as_str()
-                        };
+                            let insertial = if trim_the_insertial {
+                                raw_composed_insertial.trim()
+                            } else {
+                                raw_composed_insertial.as_str()
+                            };
 
-                        template = template.replace(k, insertial);
-                    });
+                            template = template.replace(k, insertial);
+                        });
 
-                let item = &t as &dyn DeployFactor;
+                    let item = &t as &dyn DeployFactor;
 
-                let dst = generate_dst!(item, self.settings, target_extract_dir_with_gen);
+                    let dst = generate_dst!(item, self.settings, target_extract_dir_with_gen);
 
-                info!("template {} -> {}", item.name(), dst.display(),);
-                deploy_to_fs(SecBuf::<Plain>::new(template.into_bytes()), t, dst)
-            })
-            .for_each(|res| {
-                if let Err(e) = res {
-                    error!("{}", e);
-                }
-            });
+                    info!("template {} -> {}", item.name(), dst.display(),);
+                    deploy_to_fs(SecBuf::<Plain>::new(template.into_bytes()), t, dst)
+                })
+                .for_each(|res| {
+                    if let Err(e) = res {
+                        error!("{}", e);
+                    }
+                });
 
-        info!("finish templates deployment");
+            info!("no template found. deploy finished");
+        }
 
         let symlink_dst = if early {
             self.get_decrypt_dir_path_for_user()
