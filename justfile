@@ -20,5 +20,6 @@ full-test:
     nix run github:nix-community/nixos-anywhere -- --flake .#tester --vm-test
 vm-tests:
     #!/usr/bin/env nu
-    ["tester" "tester-empty-secret" "tester-empty-template"] |
-      par-each { nix run github:nix-community/nixos-anywhere -- --flake $'.#($in)' --vm-test }
+    nix run github:nix-community/nixos-anywhere -- --flake .#tester --vm-test
+    nix run github:nix-community/nixos-anywhere -- --flake .#tester-empty-secret --vm-test
+    nix run github:nix-community/nixos-anywhere -- --flake .#tester-empty-template --vm-test

@@ -218,7 +218,7 @@ in
           };
         };
 
-        systemd.services.vaultix-activate-before-user = {
+        systemd.services.vaultix-activate-before-user = mkIf (cfg.beforeUserborn != [ ]) {
           wantedBy = [ "systemd-sysusers.service" ];
           before = [ "systemd-sysusers.service" ];
           unitConfig.DefaultDependencies = "no";

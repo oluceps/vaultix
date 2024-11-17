@@ -10,13 +10,16 @@
 
 Secret management for NixOS.
 
-This project is highly inspired by [agenix-rekey](https://github.com/oddlama/agenix-rekey) and [sops-nix](https://github.com/Mic92/sops-nix). Based on rust [age](https://docs.rs/age/latest/age) crate.
+This project is highly inspired by [agenix-rekey](https://github.com/oddlama/agenix-rekey) and [sops-nix](https://github.com/Mic92/sops-nix).
 
-+ Age Plugin Compatible
-+ Support Template
-+ Support identity with passphrase
-+ Support PIV Card (Yubikey)
-+ No Bash
++ Based on age rust [implemention](https://docs.rs/age/latest/age)
++ Support secure identity with passphrase
++ Support template for reusing insensitive stanza
++ Support Yubikey PIV with [age-yubikey-plugin](https://github.com/str4d/age-plugin-yubikey)
++ Small closure size increase (less than 1.5M)
++ Fits well with new `sysuser` nixos userborn machenism
++ Design with [flake-parts](https://flake.parts/) and modulized flake
++ Compatible and tested with most nixos deployment tools (nixos-rebuild, apply, colmena)
 
 ## Setup
 
@@ -24,10 +27,4 @@ See [docs](https://oluceps.github.io/vaultix/)
 
 ## TODO
 
-See [TODO](./TODO.md)
-
-## Credits
-
-+ [agenix](https://github.com/ryantm/agenix)
-+ [agenix-rekey](https://github.com/oddlama/agenix-rekey)
-+ [sops-nix](https://github.com/Mic92/sops-nix)
+See [todo](./TODO.md)

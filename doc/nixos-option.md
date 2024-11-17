@@ -16,7 +16,7 @@ Configurable option could be divided into 3 parts:
 }
 ```
 
-## Settings =
+## Settings
 Literally.
 
 
@@ -33,7 +33,10 @@ Same as above, but for secrets and templates that required by user, which means 
 
 <div id="dmp"></div>
 
-### decryptedMountPoint: path str with no trailing slash
+### decryptedMountPoint
+
+Path str with no trailing slash
+
 default is `/run/vaultix.d`
 
 Where secrets are created before they are symlinked to `vaultix.settings.decryptedDir`
@@ -102,7 +105,9 @@ This part basically keeps identical with `agenix`. But has few diffs:
 
 + no `symlink: bool` option, since it has an systemd function called [tmpfiles.d](https://www.freedesktop.org/software/systemd/man/latest/tmpfiles.d.html).
 
-### path: path str
+### path
+
+str of path
 
 If you manually set this, it will deploy to specified location instead of to `/run/vaultix.d` (default value of [decryptedMountPoint](#dmp)).
 
@@ -133,7 +138,7 @@ templates = {
 ```
 
 
-### content: str
+### content
 
 
 Insert `config.vaultix.placeholder.example` in plain string content.
@@ -162,14 +167,18 @@ ${config.vaultix.placeholder.some} here
 
 TO BE NOTICE that the source secret file may have trailing `\n`:
 
-### trim: bool
+### trim
+
+boolean value
 
 default true;
 
 Removing trailing and leading whitespace by default.
 
 
-## beforeUserborn: [str]
+## beforeUserborn
+
+List of string.
 
 For deploying secrets and templates that required before user init.
 

@@ -1,6 +1,6 @@
 # Summary
 
-- [Intro](./intro.md)
+- [Introduction](./intro.md)
 - [Prerequisits](./prerequisits.md)
 - [Setup](./setup.md)
   - [Flake Option](./flake-option.md)
