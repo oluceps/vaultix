@@ -11,7 +11,6 @@
   imports = [
     inputs.disko.nixosModules.disko
     ./UEFI.nix
-    ./check.nix
     (modulesPath + "/profiles/qemu-guest.nix")
     # (modulesPath + "/profiles/perlless.nix") :(
 

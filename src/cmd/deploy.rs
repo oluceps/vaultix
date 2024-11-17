@@ -155,11 +155,16 @@ impl Profile {
     */
     pub fn deploy(self, early: bool) -> Result<()> {
         if self.secrets.is_empty() && self.templates.is_empty() {
+            info!("nothing needs to deploy. finish");
+            return Ok(());
+        }
+        if self.before_userborn.is_empty() && early {
+            info!("nothing needs to deploy before userborn. finish");
             return Ok(());
         }
         let host_prv_key = &self.get_host_key_identity()?;
 
-        let if_early = |i: &String| -> bool { self.need_by_user.contains(i) == early };
+        let if_early = |i: &String| -> bool { self.before_userborn.contains(i) == early };
 
         let secrets_to_deploy = self.secrets.iter().filter(|i| if_early(i.0));
 

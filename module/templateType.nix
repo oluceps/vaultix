@@ -46,7 +46,7 @@ in
       path = mkOption {
         type = types.str;
         default =
-          if elem submod.config._module.args.name cfg.needByUser then
+          if elem submod.config._module.args.name cfg.beforeUserborn then
             "${cfg.settings.decryptedDirForUser}/${submod.config.name}"
           else
             "${cfg.settings.decryptedDir}/${submod.config.name}";

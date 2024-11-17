@@ -11,7 +11,7 @@ Configurable option could be divided into 3 parts:
     settings = { ... };
     secrets = { ... };
     templates = { ... };
-    needByUser = [...];
+    beforeUserborn = [...];
   };
 }
 ```
@@ -169,7 +169,7 @@ default true;
 Removing trailing and leading whitespace by default.
 
 
-## needByUser: [str]
+## beforeUserborn: [str]
 
 For deploying secrets and templates that required before user init.
 

@@ -169,7 +169,7 @@ in
       '';
     };
 
-    needByUser = mkOption {
+    beforeUserborn = mkOption {
       type = types.listOf types.str;
       default = [ ];
       description = ''
