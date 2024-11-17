@@ -1,5 +1,5 @@
-- [ ] optimize template placeholder map get
-- [ ] secrets for users
+- [x] secrets for users
+- [x] optimize template placeholder map get
 - [x] test with os
 - [x] deploy to specified location
 - [x] move storageInStore into flake module
