@@ -322,7 +322,9 @@ impl Profile {
         match std::fs::remove_file(&symlink_dst) {
             Err(e) if e.kind() == io::ErrorKind::NotFound => {}
             Err(e) => Err(eyre!("{}", e))?,
-            Ok(_) => {}
+            Ok(_) => {
+                debug!("old symlink removed");
+            }
         }
         // link back to /run/vaultix*
         std::os::unix::fs::symlink(target_extract_dir_with_gen, symlink_dst)

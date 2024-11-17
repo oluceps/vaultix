@@ -2,7 +2,7 @@
 authors = ["oluceps"]
 language = "en"
 multilingual = false
-src = "src"
+src = "doc"
 title = "vaultix manual"
 
 [output.html]

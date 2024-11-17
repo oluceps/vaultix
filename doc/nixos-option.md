@@ -71,7 +71,7 @@ Get this by: `ssh-keyscan ip`. It supports `ed25519` type.
 
 ---
 
-## Secrets = { }
+## Secrets
 
 Here is a secrets:
 ```nix
@@ -136,15 +136,15 @@ templates = {
 ### content: str
 
 
-To insert secrets in this string, insert `config.vaultix.placeholder.example`.
+Insert `config.vaultix.placeholder.example` in plain string content.
 
-This pretend the secret which `id` (the keyof attribute of secrets) was defined.
+This expects the `placeholder.<*>` identical with defined secret `id` (the keyof it).
 
 <div id="id-state"></div>
 
 ```nix
 secrets = {
-  # the id is 'example'. despite `name`.
+  # the id is 'example' here.
   example = {
     file = ./secret/example.age;
   };
@@ -174,3 +174,9 @@ Removing trailing and leading whitespace by default.
 For deploying secrets and templates that required before user init.
 
 List of [id](#id-state) of templates or secrets.
+
+example:
+
+```nix
+beforeUserborn = ["secret1" "secret2" "template1"];
+```
