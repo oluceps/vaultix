@@ -66,11 +66,23 @@ format:
 ]
 ```
 
-### hostPubkey: str
+### hostPubkey: str or path
 
-ssh public key of the private key, which defines above. This is different from every host, since each generates host key while initial booting.
+example:
 
-Get this by: `ssh-keyscan ip`. It supports `ed25519` type.
+```nix
+hostPubkey = "ssh-ed25519 AAAAC3Nz....."
+# or
+hostPubkey = /etc/ssh/ssh_host_ed25519_key.pub
+```
+
+ssh public key **of** the hostKey. This is different from every host, since each generates host key while initial booting.
+
+Get this of remote machine by: `ssh-keyscan ip`. It supports `ed25519` type.
+
+It should placed in `/etc/ssh/` with host ssh private key, but with `.pub` suffix.
+
+This could be either literal string or path, but public key literal string is more recommended.
 
 ---
 
