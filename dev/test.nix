@@ -85,7 +85,7 @@
                         machine.succeed("test -e /run/vaultix.d/0")
                         machine.succeed("test -e /run/vaultix.d/1")
                         machine.succeed("test -e ${config.vaultix.secrets.test-secret-1.path}")
-                        machine.succeed("test -e ${config.vaultix.secrets.test-secret-2.path}")
+                        machine.succeed("test -e ${config.vaultix.secrets.test-secret-2.path}") # two generation produced bcz of pre-user unit
                         machine.succeed("test -e ${config.vaultix.templates.template-test.path}")
                         machine.succeed("md5sum -c ${pkgs.writeText "checksum-list" ''
                           2e57c2db0f491eba1d4e496a076cdff7 ${config.vaultix.secrets.test-secret-1.path}
@@ -125,8 +125,6 @@
 
                   vaultix = {
                     settings.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEu8luSFCts3g367nlKBrxMdLyOy4Awfo5Rb397ef2AR";
-
-                    beforeUserborn = [ "test-secret-2" ];
                   };
 
                   # for vm testing log
@@ -164,8 +162,6 @@
                   vaultix = {
                     settings.hostPubkey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEu8luSFCts3g367nlKBrxMdLyOy4Awfo5Rb397ef2AR";
 
-                    beforeUserborn = [ "test-secret-2" ];
-
                     secrets.test-secret-1 = {
                       file = ./secrets/there-is-a-secret.age;
                       mode = "400";
@@ -187,7 +183,6 @@
                     disko.tests = {
                       extraChecks = ''
                         machine.succeed("test -e /run/vaultix.d/0")
-                        machine.succeed("test -e /run/vaultix.d/1")
                         machine.succeed("test -e ${config.vaultix.secrets.test-secret-1.path}")
                       '';
                     };

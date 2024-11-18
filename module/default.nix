@@ -8,10 +8,12 @@
 }:
 let
   inherit (lib)
+    all
     types
     mkOption
     isPath
     readFile
+    hasAttr
     literalMD
     warn
     literalExpression
@@ -206,6 +208,7 @@ in
         ];
       in
       {
+
         systemd.services.vaultix-activate = {
           wantedBy = [ "sysinit.target" ];
           after = [ "systemd-sysusers.service" ];
@@ -230,6 +233,15 @@ in
             RemainAfterExit = true;
           };
         };
+
+        assertions = [
+          {
+            assertion = all (b: b) (
+              map (i: hasAttr i cfg.templates || hasAttr i cfg.secrets) cfg.beforeUserborn
+            );
+            message = "one or more element of `beforeUserborn` not found in either templates or secrets.";
+          }
+        ];
       }
     );
 }
