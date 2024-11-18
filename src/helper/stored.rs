@@ -182,7 +182,7 @@ impl<'a> SecMap<'a, SecPBWith<InStore>> {
     }
 
     /// read secret file
-    pub fn bake_ctx(self) -> Result<SecMap<'a, SecBuf<HostEnc>>> {
+    pub fn bake(self) -> Result<SecMap<'a, SecBuf<HostEnc>>> {
         self.inner()
             .into_iter()
             .map(|(k, v)| v.read_buffer().map(|b| (k, SecBuf::from(b))))
@@ -261,11 +261,11 @@ impl SecMap<'_, UniPath> {
             use std::io::Write;
 
             trace!("re-encrypted output path {}", real.path.display());
-            let enc_ctx = store.read_buffer().expect("read buffer in store err");
+            let enc = store.read_buffer().expect("read buffer in store err");
             // rencrypt
-            let renc_ctx = SecBuf::<AgeEnc>::new(enc_ctx)
+            let agenc = SecBuf::<AgeEnc>::new(enc)
                 .renc(ident, recips.clone())
-                .expect("renc_ctx err");
+                .expect("renc err");
 
             let mut target_file = fs::OpenOptions::new()
                 .write(true)
@@ -274,7 +274,7 @@ impl SecMap<'_, UniPath> {
                 .open(real.path.clone())?;
 
             target_file
-                .write_all(renc_ctx.buf_ref())
+                .write_all(agenc.buf_ref())
                 .wrap_err_with(|| eyre!("write renc file error"))
         })
     }

@@ -1,3 +1,7 @@
+use std::fs::{OpenOptions, Permissions};
+use std::io::Write;
+use std::os::unix::fs::PermissionsExt;
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::{io::Read, iter, marker::PhantomData};
 
@@ -38,13 +42,13 @@ impl<T> SecBuf<T> {
         let buffer = self.buf_ref();
         let decryptor = age::Decryptor::new(&buffer[..])?;
 
-        let mut dec_ctx = vec![];
+        let mut dec_content = vec![];
         let mut reader = decryptor.decrypt(iter::once(ident))?;
-        let res = reader.read_to_end(&mut dec_ctx);
+        let res = reader.read_to_end(&mut dec_content);
         if let Ok(b) = res {
             debug!("decrypted secret {} bytes", b);
         }
-        Ok(SecBuf::new(dec_ctx))
+        Ok(SecBuf::new(dec_content))
     }
 }
 
@@ -68,6 +72,8 @@ impl SecBuf<AgeEnc> {
 }
 use eyre::eyre;
 
+use super::set_owner_group;
+
 impl SecBuf<Plain> {
     /// encrypt with host pub key, ssh key
     pub fn encrypt(self, recips: Vec<Rc<dyn Recipient>>) -> Result<SecBuf<HostEnc>> {
@@ -76,14 +82,40 @@ impl SecBuf<Plain> {
             .map_err(|_| eyre!("create encryptor err"))?;
 
         let buf = self.buf_ref();
-        let mut enc_ctx = vec![];
+        let mut enc_content = vec![];
 
-        let mut writer = encryptor.wrap_output(&mut enc_ctx)?;
+        let mut writer = encryptor.wrap_output(&mut enc_content)?;
 
         use std::io::Write;
         writer.write_all(buf)?;
         writer.finish()?;
-        Ok(SecBuf::new(enc_ctx))
+        Ok(SecBuf::new(enc_content))
+    }
+
+    pub fn deploy_to_fs(
+        &self,
+        item: impl crate::profile::DeployFactor,
+        dst: PathBuf,
+    ) -> Result<()> {
+        let mut the_file = {
+            let mode = crate::parser::parse_octal_str(item.mode())
+                .map_err(|e| eyre!("parse octal permission err: {}", e))?;
+            let permissions = Permissions::from_mode(mode);
+
+            let file = OpenOptions::new()
+                .create(true)
+                .truncate(true)
+                .write(true)
+                .open(dst)?;
+
+            file.set_permissions(permissions)?;
+
+            set_owner_group::set_owner_and_group(&file, item.owner(), item.group())?;
+
+            file
+        };
+        the_file.write_all(self.buf_ref())?;
+        Ok(())
     }
 }
 

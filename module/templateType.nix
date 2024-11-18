@@ -17,12 +17,6 @@ in
 {
   templateType = types.submodule (submod: {
     options = {
-      type = mkOption {
-        type = types.str;
-        default = "template";
-        readOnly = true;
-        description = "Identifier of option type";
-      };
       content = mkOption {
         type = types.str;
         default = "";
