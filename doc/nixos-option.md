@@ -8,7 +8,10 @@ Configurable option could be divided into 3 parts:
 {
   imports = [ inputs.vaultix.nixosModules.default ];
   vaultix = {
-    settings = { ... };
+    settings = {
+      hostPubkey = "ssh-ed25519 AAAA..."; # required
+      # ...
+    };
     secrets = { ... };
     templates = { ... };
     beforeUserborn = [...];
