@@ -14,8 +14,8 @@ use crate::helper::{
 
 use age::Recipient;
 use eyre::{eyre, Context, ContextCompat};
+use log::info;
 use nom::AsBytes;
-use spdlog::info;
 
 use super::EditSubCmd;
 

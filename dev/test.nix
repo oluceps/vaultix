@@ -72,7 +72,7 @@
                     };
 
                     # for vm testing log
-                    systemd.services.vaultix-activate.serviceConfig.Environment = [ "SPDLOG_RS_LEVEL=trace" ];
+                    systemd.services.vaultix-activate.serviceConfig.Environment = [ "RUST_LOG=trace" ];
                   }
                 )
 
@@ -128,7 +128,7 @@
                   };
 
                   # for vm testing log
-                  systemd.services.vaultix-activate.serviceConfig.Environment = [ "SPDLOG_RS_LEVEL=trace" ];
+                  systemd.services.vaultix-activate.serviceConfig.Environment = [ "RUST_LOG=trace" ];
                 })
 
                 ./configuration.nix
@@ -172,7 +172,7 @@
                   };
 
                   # for vm testing log
-                  systemd.services.vaultix-activate.serviceConfig.Environment = [ "SPDLOG_RS_LEVEL=trace" ];
+                  systemd.services.vaultix-activate.serviceConfig.Environment = [ "RUST_LOG=trace" ];
                 })
 
                 ./configuration.nix

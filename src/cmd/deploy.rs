@@ -20,7 +20,7 @@ use age::Recipient;
 use eyre::{eyre, Context, ContextCompat, Result};
 use hex::decode;
 use lib::extract_all_hashes;
-use spdlog::{debug, error, info, trace};
+use log::{debug, error, info};
 use sys_mount::{Mount, MountFlags, SupportedFilesystems};
 
 impl HostKey {
@@ -191,7 +191,7 @@ impl Profile {
                     ret
                 } else {
                     if PathBuf::from($obj.path()).starts_with(&default_path) {
-                        spdlog::warn!(
+                        log::warn!(
                             "extract to decryptedDir detected. recommend specify `name` instead of `path`."
                         );
                     }
@@ -256,7 +256,7 @@ impl Profile {
                         })
                         .for_each(|(k, v)| {
                             // render and insert
-                            trace!("template before process: {}", template);
+                            log::trace!("template before process: {}", template);
 
                             let raw_composed_insertial = String::from_utf8_lossy(v).to_string();
 
@@ -290,11 +290,6 @@ impl Profile {
         } else {
             self.decrypted_dir()
         };
-        info!(
-            "link decrypted dir {} to {}",
-            target_extract_dir_with_gen.display(),
-            symlink_dst
-        );
 
         match std::fs::remove_file(symlink_dst) {
             Err(e) if e.kind() == io::ErrorKind::NotFound => {}
@@ -303,7 +298,12 @@ impl Profile {
                 debug!("old symlink removed");
             }
         }
-        // link back to /run/vaultix*
+
+        info!(
+            "linking decrypted dir {} to {}",
+            target_extract_dir_with_gen.display(),
+            symlink_dst
+        );
         std::os::unix::fs::symlink(target_extract_dir_with_gen, symlink_dst)
             .wrap_err_with(|| "create symlink error")
     }

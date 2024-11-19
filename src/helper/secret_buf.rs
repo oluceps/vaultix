@@ -6,8 +6,6 @@ use std::rc::Rc;
 use std::{io::Read, iter, marker::PhantomData};
 
 use age::{Identity, Recipient};
-use spdlog::debug;
-
 #[derive(Debug, Clone)]
 pub struct AgeEnc;
 #[derive(Debug, Clone)]
@@ -71,6 +69,7 @@ impl SecBuf<AgeEnc> {
     }
 }
 use eyre::eyre;
+use log::debug;
 
 use super::set_owner_group;
 

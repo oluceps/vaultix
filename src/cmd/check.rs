@@ -1,5 +1,5 @@
 use eyre::Result;
-use spdlog::{debug, error};
+use log::{debug, error};
 
 use crate::{
     helper::stored::{InStore, SecMap, SecPath},

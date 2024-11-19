@@ -1,5 +1,5 @@
 use eyre::{eyre, Context, Result};
-use spdlog::{debug, error, info};
+use log::{debug, error, info};
 use std::{fs, path::PathBuf};
 
 use crate::{

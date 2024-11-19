@@ -7,15 +7,14 @@ use std::{
     rc::Rc,
 };
 
-use age::{Identity, Recipient};
-use eyre::Context;
-use spdlog::{debug, trace};
-
 use crate::{
     helper::secret_buf::{AgeEnc, SecBuf},
     profile::{self, Secret, SecretSet},
 };
+use age::{Identity, Recipient};
+use eyre::Context;
 use eyre::{eyre, Result};
+use log::{debug, trace};
 use std::marker::PhantomData;
 
 use super::secret_buf::HostEnc;

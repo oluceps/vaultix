@@ -1,7 +1,7 @@
 use std::{fs, path::PathBuf};
 
 use eyre::{eyre, Context, ContextCompat};
-use spdlog::prelude::*;
+use log::{debug, info};
 use {argh::FromArgs, std::fmt::Debug};
 
 mod check;
