@@ -16,7 +16,6 @@ This project is highly inspired by [agenix-rekey](https://github.com/oddlama/age
 + Support secure identity with passphrase
 + Support template for reusing insensitive stanza
 + Support Yubikey PIV with [age-yubikey-plugin](https://github.com/str4d/age-plugin-yubikey)
-+ Small closure size increase (less than 1.5M)
 + Fits well with new `sysuser` nixos userborn machenism
 + Design with [flake-parts](https://flake.parts/) and modulized flake
 + Compatible and tested with most nixos deployment tools (nixos-rebuild, apply, colmena)
