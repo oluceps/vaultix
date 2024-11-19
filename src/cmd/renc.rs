@@ -1,15 +1,12 @@
+use super::super::util::secmap::Renc;
+use crate::{
+    interop::add_to_store,
+    parser::identity::{ParsedIdentity, RawIdentity},
+    profile::Profile,
+};
 use eyre::{eyre, Context, Result};
 use log::{debug, error, info};
 use std::{fs, path::PathBuf};
-
-use crate::{
-    helper::{
-        parse_identity::{ParsedIdentity, RawIdentity},
-        stored::Renc,
-    },
-    interop::add_to_store,
-    profile::Profile,
-};
 
 impl Profile {
     /**

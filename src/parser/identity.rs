@@ -2,7 +2,7 @@ use age::{Identity, IdentityFile, Recipient};
 use eyre::{eyre, ContextCompat};
 use serde::Deserialize;
 
-use super::callback::UiCallbacks;
+use super::super::util::callback::UiCallbacks;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct RawIdentity(String);

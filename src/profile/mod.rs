@@ -1,6 +1,8 @@
-use std::collections::HashMap;
+pub mod placeholder;
+pub mod template;
 
 use serde::Deserialize;
+use std::collections::HashMap;
 
 pub type SecretSet = HashMap<String, Secret>;
 pub type TemplateSet = HashMap<String, Template>;

@@ -5,11 +5,13 @@ use std::{
     rc::Rc,
 };
 
-use crate::helper::{
-    parse_identity::{ParsedIdentity, RawIdentity},
-    parse_recipient::RawRecip,
-    secret_buf::{AgeEnc, Plain, SecBuf},
-    stored::{GetSec, InCfg, SecPath},
+use crate::parser::{
+    identity::{ParsedIdentity, RawIdentity},
+    recipient::RawRecip,
+};
+use crate::util::{
+    secbuf::{AgeEnc, Plain, SecBuf},
+    secmap::{GetSec, InCfg, SecPath},
 };
 
 use age::Recipient;

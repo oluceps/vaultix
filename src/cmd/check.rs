@@ -2,8 +2,8 @@ use eyre::Result;
 use log::{debug, error};
 
 use crate::{
-    helper::stored::{InStore, SecMap, SecPath},
     profile::Profile,
+    util::secmap::{InStore, SecMap, SecPath},
 };
 
 impl Profile {

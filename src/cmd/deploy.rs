@@ -8,14 +8,14 @@ use std::{
 };
 
 use crate::{
-    helper::{
-        secret_buf::{Plain, SecBuf},
-        stored::{InStore, SecMap, SecPath},
-    },
     profile::{DeployFactor, HostKey, Profile},
+    util::{
+        secbuf::{Plain, SecBuf},
+        secmap::{InStore, SecMap, SecPath},
+    },
 };
 
-use crate::helper::parse_recipient::RawRecip;
+use crate::parser::recipient::RawRecip;
 use age::Recipient;
 use eyre::{eyre, Context, ContextCompat, Result};
 use hex::decode;

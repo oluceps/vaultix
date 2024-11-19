@@ -8,8 +8,8 @@ use std::{
 };
 
 use crate::{
-    helper::secret_buf::{AgeEnc, SecBuf},
     profile::{self, Secret, SecretSet},
+    util::secbuf::AgeEnc,
 };
 use age::{Identity, Recipient};
 use eyre::Context;
@@ -17,7 +17,7 @@ use eyre::{eyre, Result};
 use log::{debug, trace};
 use std::marker::PhantomData;
 
-use super::secret_buf::HostEnc;
+use super::secbuf::{HostEnc, SecBuf};
 
 #[derive(Debug, Clone)]
 pub struct SecPath<P: AsRef<Path>, T> {
