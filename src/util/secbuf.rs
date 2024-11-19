@@ -29,6 +29,13 @@ impl<T> SecBuf<T> {
     pub fn inner(self) -> Vec<u8> {
         self.buf
     }
+
+    pub fn hash_with(&self, host_ssh_recip: &str) -> blake3::Hash {
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(&self.buf);
+        hasher.update(host_ssh_recip.as_bytes());
+        hasher.finalize()
+    }
 }
 
 use eyre::Result;

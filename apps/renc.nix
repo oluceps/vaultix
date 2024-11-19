@@ -9,25 +9,22 @@
 }:
 let
   inherit (pkgs) writeShellScriptBin;
-  inherit (lib) concatStringsSep foldlAttrs;
+  inherit (lib) concatStringsSep attrValues;
   bin = pkgs.lib.getExe package;
 
-  rencCmds = foldlAttrs (
-    acc: name: value:
+  profilesArgs = concatStringsSep " " (
+    map (
+      v:
+      "--profile"
+      + " "
+      + (pkgs.writeTextFile {
+        name = "vaultix-material";
+        text = builtins.toJSON v.config.vaultix;
+      })
+    ) (attrValues nodes)
+  );
 
-    let
-      profile = pkgs.writeTextFile {
-        name = "secret-meta-${name}";
-        text = builtins.toJSON value.config.vaultix;
-      };
-    in
-    acc
-    ++ [
-      "${bin} --profile ${profile} renc --identity ${identity} --cache ${
-        cache + "/" + value.config.networking.hostName
-      }"
-    ]
-  ) [ ] nodes;
+  rencCmds = "${bin} ${profilesArgs} renc --identity ${identity} --cache ${cache}";
 
 in
-writeShellScriptBin "renc" (concatStringsSep "\n" rencCmds)
+writeShellScriptBin "renc" rencCmds

@@ -8,10 +8,11 @@ use std::{
 };
 
 use crate::{
+    cmd::renc::CompleteProfile,
     profile::{DeployFactor, HostKey, Profile},
     util::{
         secbuf::{Plain, SecBuf},
-        secmap::{InStore, SecMap, SecPath},
+        secmap::{RencBuilder, RencCtx},
     },
 };
 
@@ -40,7 +41,7 @@ macro_rules! impl_get_settings {
     ([ $($field:ident),+ $(,)? ]) => {
         impl Profile {
             $(
-                fn $field(&self) -> &str {
+                pub fn $field(&self) -> &str {
                     self.settings.$field.as_str()
                 }
             )+
@@ -48,7 +49,13 @@ macro_rules! impl_get_settings {
     };
 }
 
-impl_get_settings!([decrypted_mount_point, decrypted_dir, decrypted_dir_for_user]);
+impl_get_settings!([
+    decrypted_mount_point,
+    decrypted_dir,
+    decrypted_dir_for_user,
+    host_identifier,
+    host_pubkey
+]);
 
 impl Profile {
     pub fn read_decrypted_mount_point(&self) -> std::io::Result<ReadDir> {
@@ -68,7 +75,7 @@ impl Profile {
             Err(eyre!("key with type {} not found", KEY_TYPE))
         }
     }
-    pub fn get_host_recip(&self) -> Result<Rc<dyn Recipient>> {
+    pub fn _get_host_recip(&self) -> Result<Rc<dyn Recipient>> {
         let recip: RawRecip = self.settings.host_pubkey.clone().into();
         recip.try_into()
     }
@@ -131,7 +138,7 @@ impl Profile {
     /**
     extract secrets to `/run/vaultix.d/$num` and link to `/run/vaultix`
     */
-    pub fn deploy(self, early: bool) -> Result<()> {
+    pub fn deploy(&self, early: bool) -> Result<()> {
         if self.secrets.is_empty() && self.templates.is_empty() {
             info!("nothing needs to deploy. finish");
             return Ok(());
@@ -148,16 +155,13 @@ impl Profile {
 
         let templates = self.templates.iter().filter(|i| if_early(i.0));
 
-        let plain_map: SecMap<Vec<u8>> = SecMap::<SecPath<_, InStore>>::from_iter(secrets)
-            .renced_stored(
-                self.settings.cache_in_store.clone().into(),
-                self.settings.host_pubkey.as_str(),
-            )
-            .bake()?
-            .inner()
-            .iter()
-            .map(|(s, c)| (*s, c.decrypt(host_prv_key).expect("err").inner()))
-            .collect();
+        let complete = CompleteProfile(vec![self]);
+        let ctx = RencCtx::create(&complete);
+
+        let plain_map = RencBuilder::create(&complete)
+            .build_instore()
+            .renced_stored(&ctx, self.settings.cache_in_store.clone().into())
+            .bake_decrypted(host_prv_key)?;
 
         let generation = self.init_decrypted_mount_point()?;
 
@@ -202,17 +206,18 @@ impl Profile {
         }
 
         // deploy general secrets
-        plain_map
-            .inner_ref()
-            .iter()
-            .map(|(n, c)| {
-                let plain = SecBuf::<Plain>::new(c.clone());
-                let item = n as &dyn DeployFactor;
+        secrets
+            .map(|n| {
+                let raw_content = plain_map
+                    .get(n)
+                    .wrap_err_with(|| eyre!("decrypted content must found"))?;
+                let plain = SecBuf::<Plain>::new(raw_content.clone());
+                let item = &n as &dyn DeployFactor;
                 let dst: PathBuf = generate_dst!(item, self.settings, target_extract_dir_with_gen);
 
                 info!("secret {} -> {}", item.name(), dst.display(),);
 
-                plain.deploy_to_fs(*n, dst)
+                plain.deploy_to_fs(n, dst)
             })
             .for_each(|res| {
                 if let Err(e) = res {
@@ -225,7 +230,6 @@ impl Profile {
             info!("start templates deployment");
             // new map with {{ hash }} String as key, content as value
             let hashstr_content_map: HashMap<&str, &Vec<u8>> = plain_map
-                .inner_ref()
                 .iter()
                 .map(|(k, v)| {
                     self.placeholder
@@ -282,7 +286,7 @@ impl Profile {
                     }
                 });
         } else {
-            info!("no template found. deploy finished");
+            info!("no template need to deploy. finished");
         }
 
         let symlink_dst = if early {

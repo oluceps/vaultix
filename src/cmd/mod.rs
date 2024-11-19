@@ -2,12 +2,13 @@ use std::{fs, path::PathBuf};
 
 use eyre::{eyre, Context, ContextCompat};
 use log::{debug, info};
+use renc::CompleteProfile;
 use {argh::FromArgs, std::fmt::Debug};
 
 mod check;
 mod deploy;
 mod edit;
-mod renc;
+pub mod renc;
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// Vaultix cli | Secret manager for NixOS
@@ -16,7 +17,7 @@ pub struct Args {
     app: SubCmd,
     #[argh(option, short = 'p')]
     /// secret profile
-    profile: Option<String>,
+    profile: Vec<String>,
     #[argh(option, short = 'f')]
     /// toplevel of flake repository
     flake_root: Option<String>,
@@ -55,7 +56,7 @@ pub struct EditSubCmd {
     identity: Option<String>,
     #[argh(option, short = 'r')]
     /// recipients for encrypt secrets
-    recipients: Vec<String>,
+    recipient: Vec<String>,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -63,7 +64,7 @@ pub struct EditSubCmd {
 #[argh(subcommand, name = "deploy")]
 pub struct DeploySubCmd {
     #[argh(switch, short = 'e')]
-    /// deploy for user
+    /// deploy before users init
     early: bool,
 }
 
@@ -77,15 +78,18 @@ impl Args {
     pub fn ayaya(&self) -> eyre::Result<()> {
         use super::profile::Profile;
 
-        let profile = || -> eyre::Result<Profile> {
-            let file = self
-                .profile
-                .clone()
-                .wrap_err_with(|| eyre!("this cmd requires provide profile"))
-                .and_then(|p| fs::read_to_string(p).wrap_err_with(|| eyre!("read file error")))
-                .wrap_err_with(|| eyre::eyre!("read profile error"))
-                .wrap_err("arg `profile` not found")?;
-            serde_json::from_str(file.as_str()).wrap_err_with(|| eyre::eyre!("parse profile fail"))
+        let profile = || -> eyre::Result<Vec<Profile>> {
+            self.profile
+                .iter()
+                .map(|p| {
+                    fs::read_to_string(p)
+                        .wrap_err_with(|| eyre!("read file error"))
+                        .and_then(|f| {
+                            serde_json::from_str(f.as_str())
+                                .wrap_err_with(|| eyre::eyre!("parse profile fail"))
+                        })
+                })
+                .collect()
         };
 
         let flake_root = if let Some(f) = &self.flake_root {
@@ -97,13 +101,21 @@ impl Args {
         match &self.app {
             SubCmd::Renc(RencSubCmd { identity, cache }) => {
                 debug!("start re-encrypt secrets");
-                let profile = profile()?;
-                profile.renc(flake_root, identity.clone(), cache.into())
+                let real_profile = profile()?;
+                let profile: Vec<&Profile> = real_profile.iter().collect();
+                CompleteProfile::from(profile).renc(
+                    flake_root.clone(),
+                    identity.clone(),
+                    cache.into(),
+                )
             }
             SubCmd::Deploy(DeploySubCmd { early }) => {
                 info!("deploying secrets");
                 let profile = profile()?;
-                profile.deploy(*early)
+                profile
+                    .first()
+                    .wrap_err_with(|| eyre!("deploy must provide one single profile"))?
+                    .deploy(*early)
             }
             SubCmd::Edit(e) => {
                 info!("editing secrets");
@@ -111,8 +123,9 @@ impl Args {
             }
             SubCmd::Check(_) => {
                 info!("start checking");
-                let profile = profile()?;
-                profile.check()?;
+                let real_profile = profile()?;
+                let profile = real_profile.iter().collect();
+                CompleteProfile(profile).check()?;
                 info!("check complete");
                 Ok(())
             }

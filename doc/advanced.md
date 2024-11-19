@@ -1,7 +1,9 @@
 # Advanced
 
+## Bootstrap
 
 
+todo
 
 ## Tricks
 

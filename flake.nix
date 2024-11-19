@@ -119,7 +119,7 @@
                   ];
                 };
 
-                cargoExtraArgs = ''-Z build-std -Z build-std-features="optimize_for_size" --target ${target}'';
+                # cargoExtraArgs = ''-Z build-std -Z build-std-features="optimize_for_size" --target ${target}'';
                 meta.mainProgram = "vaultix";
               };
               vaultix = default;
