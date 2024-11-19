@@ -1,3 +1,4 @@
+- [ ] renc cmd reduce fs reads
 - [ ] multilingual docs
 - [ ] restart/reload sd unit control (after systemd varlink api)
 - [x] secrets for users
