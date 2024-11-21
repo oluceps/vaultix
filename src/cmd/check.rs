@@ -5,7 +5,7 @@ use crate::util::secmap::{RencBuilder, RencCtx};
 
 use super::renc::CompleteProfile;
 
-impl<'a> CompleteProfile<'a> {
+impl CompleteProfile<'_> {
     pub fn check(&self) -> Result<()> {
         let profile = self
             .inner_ref()
