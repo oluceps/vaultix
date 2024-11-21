@@ -1,6 +1,6 @@
 # Vaultix
 
-### Single-admin Secret Manage Scheme for NixOS.
+### Secret Manage Scheme for NixOS
 
 
 This project is highly inspired by [agenix-rekey](https://github.com/oddlama/agenix-rekey) and [sops-nix](https://github.com/Mic92/sops-nix).

@@ -8,5 +8,6 @@
 - [Nix Apps](./nix-apps.md)
 - [Workflow](./workflow.md)
 - [Development](./develop.md)
+- [Test Coverage](./coverage.md)
 - [Advanced](./advanced.md)
 - [FaQ](./faq.md)
