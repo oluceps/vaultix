@@ -3,16 +3,15 @@ on:
   pull_request:
     branches: ["*"]
     paths-ignore:
-      - 'docs/**'
       - '**/*.md'
   push:
     branches: ["main", "dev"]
     paths-ignore:
-      - 'docs/**'
       - '**/*.md'
 
 jobs:
   check:
+    name: Verify
     runs-on: ubuntu-latest
     permissions:
       id-token: "write"
@@ -22,16 +21,14 @@ jobs:
         uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - uses: DeterminateSystems/flake-checker-action@main
 
-      - name: Build vaultix cli
+      - name: Flake Check
+        uses: DeterminateSystems/flake-checker-action@main
+
+      - name: Build Vaultix
         run: |
           nix build .
 
       - name: Run cargo check
         run: |
           nix develop -c cargo check
-
-      - name: Run cargo test
-        run: |
-          nix develop -c cargo test

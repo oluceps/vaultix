@@ -1,20 +1,31 @@
+name: Lint
 on:
   pull_request:
     branches: ["*"]
     paths-ignore:
-      - 'docs/**'
       - '**/*.md'
   push:
     branches: ["main", "dev"]
     paths-ignore:
-      - 'docs/**'
       - '**/*.md'
 
-name: Nix code
+# Make sure CI fails on all warnings, including Clippy lints
+env:
+  RUSTFLAGS: "-Dwarnings"
 
 jobs:
+  clippy:
+    name: Clippy Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check
+        run: |
+          rustup default nightly
+          rustup component add clippy
+          cargo clippy --all-targets --all-features
   statix:
-    name: lint
+    name: Statix Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
