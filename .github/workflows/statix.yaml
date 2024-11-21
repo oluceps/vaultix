@@ -10,7 +10,7 @@ on:
       - 'docs/**'
       - '**/*.md'
 
-name: Lint Nix code
+name: Nix code
 
 jobs:
   statix:

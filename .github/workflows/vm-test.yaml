@@ -1,4 +1,3 @@
-
 on:
   pull_request:
     branches: ["*"]
@@ -11,10 +10,10 @@ on:
       - 'docs/**'
       - '**/*.md'
 
-name: VM test
+name: VM
 
 jobs:
-  vm-test:
+  test:
     runs-on: ubuntu-latest
     permissions:
       id-token: "write"

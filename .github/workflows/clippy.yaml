@@ -3,7 +3,7 @@ on:
     paths-ignore:
       - 'docs/**'
       - '**/*.md'
-name: Clippy check
+name: Clippy
 
 # Make sure CI fails on all warnings, including Clippy lints
 env:
