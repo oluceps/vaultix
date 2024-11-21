@@ -13,7 +13,7 @@ This project is highly inspired by [agenix-rekey](https://github.com/oddlama/age
 + Fits well with new `sysuser` nixos userborn machenism[^2]
 + Design with [flake-parts](https://flake.parts/) and modulized flake
 + Written in Rust for speed, safety, and simplicity
-+ Compatible and tested with known[^3] nixos deployment tools
++ Compatible and tested with common[^3] nixos deployment tools
 
 
 
