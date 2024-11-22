@@ -39,6 +39,11 @@ pub fn edit(arg: EditSubCmd) -> eyre::Result<()> {
         .map(|s| TryInto::<Box<dyn Recipient>>::try_into(RawRecip::from(s)).expect("convert"))
         .chain::<std::iter::Once<Box<dyn Recipient>>>(iter::once(id_parsed.recipient))
         .collect();
+    let decrypt = |v: Vec<u8>| -> eyre::Result<Vec<u8>> {
+        Ok(SecBuf::<Plain>::new(v)
+            .encrypt(recips.iter().map(|i| i.as_ref()))?
+            .inner())
+    };
 
     if PathBuf::from(&file).exists() {
         let buf = SecPath::<String, InRepo>::new(file.clone())
@@ -56,9 +61,7 @@ pub fn edit(arg: EditSubCmd) -> eyre::Result<()> {
                 return Ok(());
             }
 
-            SecBuf::<Plain>::new(edited.into_bytes())
-                .encrypt(recips.iter().map(|i| i.as_ref()))?
-                .inner()
+            decrypt(edited.into_bytes())?
         };
         let mut file = OpenOptions::new().write(true).truncate(true).open(&file)?;
 
@@ -68,10 +71,7 @@ pub fn edit(arg: EditSubCmd) -> eyre::Result<()> {
 
     let edited_buf_encrypted = {
         let edited = edit::edit(vec![])?;
-
-        SecBuf::<Plain>::new(edited.into_bytes())
-            .encrypt(recips.iter().map(|i| i.as_ref()))?
-            .inner()
+        decrypt(edited.into_bytes())?
     };
 
     let mut target_file = fs::OpenOptions::new()
