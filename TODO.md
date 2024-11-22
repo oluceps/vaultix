@@ -1,3 +1,4 @@
+- [ ] async io & encrypt
 - [ ] multilingual docs
 - [ ] restart/reload sd unit control (after systemd varlink api)
 - [x] reduce duplicated reads

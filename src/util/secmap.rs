@@ -50,13 +50,6 @@ where
             _marker: PhantomData,
         }
     }
-
-    // pub fn hash_with(&self, host_ssh_recip: &str) -> Result<blake3::Hash> {
-    //     let mut hasher = blake3::Hasher::new();
-    //     hasher.update(self.read_buffer()?.as_slice());
-    //     hasher.update(host_ssh_recip.as_bytes());
-    //     Ok(hasher.finalize())
-    // }
 }
 
 impl<P, T> GetSec for SecPath<P, T>
