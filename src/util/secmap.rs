@@ -16,7 +16,7 @@ use crate::{
 use age::Identity;
 use eyre::{eyre, Result};
 use eyre::{Context, ContextCompat};
-use log::{debug, info};
+use log::debug;
 use std::marker::PhantomData;
 
 use super::secbuf::{HostEnc, SecBuf};
@@ -263,7 +263,6 @@ impl<'a> RencInst<'a, InRepo> {
             let dir = std::fs::read_dir(host_cache_dir);
 
             if let Err(ref e) = dir {
-                info!("host cache not found. will create later");
                 if e.kind() == io::ErrorKind::NotFound {
                     return Ok(());
                 }
