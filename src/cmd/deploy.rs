@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     fs::{self, Permissions, ReadDir},
     io::{self, ErrorKind},
     iter,
@@ -17,7 +16,7 @@ use crate::{
 };
 
 use crate::parser::recipient::RawRecip;
-use age::Recipient;
+use age::{Identity, Recipient};
 use eyre::{eyre, Context, ContextCompat, Result};
 use hex::decode;
 use lib::extract_all_hashes;
@@ -75,7 +74,7 @@ impl Profile {
             Err(eyre!("key with type {} not found", KEY_TYPE))
         }
     }
-    pub fn _get_host_recip(&self) -> Result<Box<dyn Recipient>> {
+    pub fn _get_host_recip(&self) -> Result<Box<dyn Recipient + Send>> {
         let recip: RawRecip = self.settings.host_pubkey.clone().into();
         recip.try_into()
     }
@@ -147,7 +146,7 @@ impl Profile {
             info!("nothing needs to deploy before userborn. finish");
             return Ok(());
         }
-        let host_prv_key = &self.get_host_key_identity()?;
+        let host_prv_key: Box<dyn Identity> = Box::new(self.get_host_key_identity()?);
 
         let if_early = |i: &String| -> bool { self.before_userborn.contains(i) == early };
 
@@ -161,7 +160,10 @@ impl Profile {
         let plain_map = RencBuilder::create(&complete)
             .build_instore()
             .renced_stored(&ctx, self.settings.cache_in_store.clone().into())
-            .bake_decrypted(host_prv_key)?;
+            .bake_decrypted(host_prv_key)
+            .wrap_err_with(|| {
+                eyre!("decrypt failed, please delete cache dir and try re-encrypt")
+            })?;
 
         let generation = self.init_decrypted_mount_point()?;
 
@@ -229,7 +231,7 @@ impl Profile {
         if !self.templates.is_empty() {
             info!("start templates deployment");
             // new map with {{ hash }} String as key, content as value
-            let hashstr_content_map: HashMap<&str, &Vec<u8>> = plain_map
+            let hashstr_content_map: std::collections::HashMap<&str, &Vec<u8>> = plain_map
                 .iter()
                 .map(|(k, v)| {
                     self.placeholder

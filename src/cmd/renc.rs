@@ -4,7 +4,6 @@ use crate::{
     profile::Profile,
     util::secmap::{RencBuilder, RencCtx},
 };
-use age::Identity;
 use eyre::{eyre, Result};
 use log::{error, info};
 use std::{fs, path::PathBuf};
@@ -28,6 +27,7 @@ impl<'a> CompleteProfile<'a> {
     pub fn inner_ref(&self) -> &Vec<&Profile> {
         &self.0
     }
+
     /**
     read secret metadata from profile
 
@@ -52,27 +52,19 @@ impl<'a> CompleteProfile<'a> {
         };
 
         let ctx = RencCtx::create(&self);
-
-        let instance = {
-            let mut ret = RencBuilder::create(&self).build_inrepo(&ctx, cache_path.clone());
-            ret.clean_outdated(cache_path.clone())?;
-
-            ret.retain_noexist();
-            ret
-        };
+        let mut raw_instance = RencBuilder::create(&self).build_inrepo(ctx, cache_path.clone());
+        raw_instance.clean_outdated(cache_path.clone())?;
+        raw_instance.retain_noexist();
 
         let ParsedIdentity {
             identity,
             recipient: _,
         } = RawIdentity::from(identity).try_into()?;
 
-        let id = identity.as_ref() as &dyn Identity;
+        let ctx = RencCtx::create(&self);
+        raw_instance.build_instance().makeup(&ctx, identity)?;
 
-        instance.makeup(&ctx, id)?;
-
-        info!("finish");
-
-        instance
+        raw_instance
             .all_host_cache_in_repo(cache_path)
             .into_iter()
             .try_for_each(|i| {

@@ -14,24 +14,24 @@ impl CompleteProfile<'_> {
 
         let ctx = RencCtx::create(self);
 
-        RencBuilder::create(self)
+        let inst = RencBuilder::create(self)
             .build_instore()
             .renced_stored(&ctx, profile.settings.cache_in_store.clone().into())
-            .inner()
-            .into_values()
-            .try_for_each(|p| {
-                debug!("checking in-store path: {}", p.path.display());
-                if !p.path.exists() {
-                    return Err(eyre!(
-                        "See https://oluceps.github.io/vaultix/nix-apps.html#renc"
-                    ))
-                    .wrap_err_with(|| eyre!("Please run renc and add new production to git"))
-                    .wrap_err_with(|| eyre!("Forget adding it to git?"))
-                    .wrap_err_with(|| {
-                        eyre::eyre!("secrets haven't been re-encrypted: {}", p.path.display())
-                    });
-                }
-                Ok(())
-            })
+            .inner();
+
+        inst.values().try_for_each(|p| {
+            debug!("checking in-store path: {}", p.path.display());
+            if !p.path.exists() {
+                return Err(eyre!(
+                    "See https://oluceps.github.io/vaultix/nix-apps.html#renc"
+                ))
+                .wrap_err_with(|| eyre!("Please run renc and add new production to git"))
+                .wrap_err_with(|| eyre!("Forget adding it to git?"))
+                .wrap_err_with(|| {
+                    eyre::eyre!("secrets haven't been re-encrypted: {}", p.path.display())
+                });
+            }
+            Ok(())
+        })
     }
 }

@@ -9,7 +9,7 @@ pub struct RawIdentity(String);
 
 pub struct ParsedIdentity {
     pub identity: Box<dyn Identity>,
-    pub recipient: Box<dyn Recipient>,
+    pub recipient: Box<dyn Recipient + Send>,
 }
 
 impl From<String> for RawIdentity {
@@ -19,7 +19,7 @@ impl From<String> for RawIdentity {
 }
 
 impl ParsedIdentity {
-    pub fn from_exist(identity: Box<dyn Identity>, recipient: Box<dyn Recipient>) -> Self {
+    pub fn from_exist(identity: Box<dyn Identity>, recipient: Box<dyn Recipient + Send>) -> Self {
         Self {
             identity,
             recipient,
