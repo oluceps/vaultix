@@ -1,7 +1,7 @@
 use std::{fs, path::PathBuf};
 
 use eyre::{eyre, Context, ContextCompat};
-use log::{debug, info};
+use log::info;
 use renc::CompleteProfile;
 use {argh::FromArgs, std::fmt::Debug};
 
@@ -100,7 +100,7 @@ impl Args {
 
         match &self.app {
             SubCmd::Renc(RencSubCmd { identity, cache }) => {
-                debug!("start re-encrypt secrets");
+                info!("start re-encrypt secrets");
                 let profile = profile()?;
                 CompleteProfile::from_iter(&profile).renc(
                     flake_root,

@@ -102,19 +102,20 @@ impl<'a, B> RencCtx<'a, B> {
 
 impl<'a> RencCtx<'a, AgeEnc> {
     pub fn create(material: &'a CompleteProfile) -> Self {
-        let a = material.inner_ref().iter().flat_map(|x| x.secrets.values());
-
-        let mut c = HashMap::new();
-
-        // FIXME: here, if using map, stucked, cpu 100%
-        for i in a {
-            c.entry(i).or_insert_with(|| {
-                SecPathBuf::<InStore>::from(i)
-                    .read_buffer()
-                    .map(SecBuf::new)
-                    .expect("")
-            });
-        }
+        let c = material
+            .inner_ref()
+            .iter()
+            .flat_map(|x| x.secrets.values())
+            .map(|i| {
+                (
+                    i,
+                    SecPathBuf::<InStore>::from(i)
+                        .read_buffer()
+                        .map(SecBuf::new)
+                        .expect("read store must success"),
+                )
+            })
+            .collect();
         Self(c)
     }
 }
@@ -329,7 +330,11 @@ impl<'a> FromIterator<((&'a profile::Secret, HostInfo<'a>), SecPathBuf<InRepo>)>
     >(
         iter: T,
     ) -> Self {
-        iter.into_iter().collect()
+        let mut m = HashMap::new();
+        for i in iter.into_iter() {
+            m.insert(i.0, i.1);
+        }
+        Self(m)
     }
 }
 impl<'a> From<RencBuilder<'a>> for RencInst<'a, InStore> {
@@ -357,6 +362,10 @@ impl<'a> From<HashMap<(&'a Secret, HostInfo<'a>), SecPathBuf<InStore>>> for Renc
 }
 impl<'a> FromIterator<(&'a profile::Secret, SecBuf<AgeEnc>)> for RencCtx<'a, AgeEnc> {
     fn from_iter<T: IntoIterator<Item = (&'a profile::Secret, SecBuf<AgeEnc>)>>(iter: T) -> Self {
-        iter.into_iter().collect()
+        let mut m = HashMap::new();
+        for i in iter.into_iter() {
+            m.insert(i.0, i.1);
+        }
+        Self(m)
     }
 }

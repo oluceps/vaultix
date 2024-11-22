@@ -13,7 +13,11 @@ pub struct CompleteProfile<'a>(pub Vec<&'a Profile>);
 
 impl<'a> FromIterator<&'a Profile> for CompleteProfile<'a> {
     fn from_iter<T: IntoIterator<Item = &'a Profile>>(iter: T) -> Self {
-        iter.into_iter().collect()
+        let mut v = Vec::new();
+        for i in iter.into_iter() {
+            v.push(i);
+        }
+        Self(v)
     }
 }
 
