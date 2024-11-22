@@ -1,25 +1,22 @@
+
 # Vaultix
 
-![built for nixos](https://img.shields.io/static/v1?logo=nixos&logoColor=white&label=&message=Built%20for%20NixOS&color=41439a)
-![CI state eval](https://github.com/oluceps/vaultix/actions/workflows/eval.yaml/badge.svg)
-![CI state vm-test](https://github.com/oluceps/vaultix/actions/workflows/vm-test.yaml/badge.svg)
-![CI state clippy](https://github.com/oluceps/vaultix/actions/workflows/clippy.yaml/badge.svg)
-![CI state fuzz](https://github.com/oluceps/vaultix/actions/workflows/fuzz.yaml/badge.svg)
-![CI state statix](https://github.com/oluceps/vaultix/actions/workflows/statix.yaml/badge.svg)
-![CI state doc](https://github.com/oluceps/vaultix/actions/workflows/doc.yaml/badge.svg)
+[![nixos infra](https://img.shields.io/badge/NixOS%20infra-3A8FB7?style=for-the-badge&logo=nixos&logoColor=BBDDE5)](https://nixos.wiki/wiki/Comparison_of_secret_managing_schemes)
+[![doc](https://img.shields.io/badge/document-B4A582?style=for-the-badge&logo=gitbook&logoColor=white)](https://oluceps.github.io/vaultix/)
+[![eval status](https://img.shields.io/github/actions/workflow/status/oluceps/vaultix/eval.yaml?branch=main&style=for-the-badge&label=eval&color=00AA90)](https://github.com/oluceps/vaultix/actions?query=branch%3Amain)
+[![test status](https://img.shields.io/github/actions/workflow/status/oluceps/vaultix/test.yaml?branch=main&style=for-the-badge&label=test&color=00AA90)](https://github.com/oluceps/vaultix/actions?query=branch%3Amain)
 
-Secret management for NixOS.
+Secret managing scheme for NixOS
 
-This project is highly inspired by [agenix-rekey](https://github.com/oddlama/agenix-rekey) and [sops-nix](https://github.com/Mic92/sops-nix).
+Highly inspired by [agenix-rekey](https://github.com/oddlama/agenix-rekey) and [sops-nix](https://github.com/Mic92/sops-nix).
 
 + Based on age rust [implemention](https://docs.rs/age/latest/age)
 + Support secure identity with passphrase
 + Support template for reusing insensitive stanza
 + Support Yubikey PIV with [age-yubikey-plugin](https://github.com/str4d/age-plugin-yubikey)
-+ Small closure size increase (less than 1.5M)
 + Fits well with new `sysuser` nixos userborn machenism
 + Design with [flake-parts](https://flake.parts/) and modulized flake
-+ Compatible and tested with most nixos deployment tools (nixos-rebuild, apply, colmena)
++ Compatible and tested with common nixos deployment tools
 
 ## Setup
 

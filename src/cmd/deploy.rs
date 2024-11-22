@@ -1,27 +1,28 @@
 use std::{
     collections::HashMap,
-    fs::{self, OpenOptions, Permissions, ReadDir},
-    io::{self, ErrorKind, Write},
+    fs::{self, Permissions, ReadDir},
+    io::{self, ErrorKind},
+    iter,
     os::unix::fs::PermissionsExt,
     path::PathBuf,
     rc::Rc,
 };
 
 use crate::{
-    helper::{
-        self,
-        secret_buf::{Plain, SecBuf},
-        stored::{InStore, SecMap, SecPath},
-    },
+    cmd::renc::CompleteProfile,
     profile::{DeployFactor, HostKey, Profile},
+    util::{
+        secbuf::{Plain, SecBuf},
+        secmap::{RencBuilder, RencCtx},
+    },
 };
 
-use crate::helper::parse_recipient::RawRecip;
+use crate::parser::recipient::RawRecip;
 use age::Recipient;
 use eyre::{eyre, Context, ContextCompat, Result};
 use hex::decode;
 use lib::extract_all_hashes;
-use spdlog::{debug, error, info, trace};
+use log::{debug, error, info};
 use sys_mount::{Mount, MountFlags, SupportedFilesystems};
 
 impl HostKey {
@@ -37,44 +38,29 @@ impl HostKey {
 
 const KEY_TYPE: &str = "ed25519";
 
-fn deploy_to_fs(
-    ctx: SecBuf<Plain>,
-    item: impl crate::profile::DeployFactor,
-    dst: PathBuf,
-) -> Result<()> {
-    let mut the_file = {
-        let mode = crate::parser::parse_octal_str(item.mode())
-            .map_err(|e| eyre!("parse octal permission err: {}", e))?;
-        let permissions = Permissions::from_mode(mode);
-
-        let file = OpenOptions::new()
-            .create(true)
-            .truncate(true)
-            .write(true)
-            .open(dst)?;
-
-        file.set_permissions(permissions)?;
-
-        helper::set_owner_group::set_owner_and_group(&file, item.owner(), item.group())?;
-
-        file
+macro_rules! impl_get_settings {
+    ([ $($field:ident),+ $(,)? ]) => {
+        impl Profile {
+            $(
+                pub fn $field(&self) -> &str {
+                    self.settings.$field.as_str()
+                }
+            )+
+        }
     };
-    the_file.write_all(ctx.buf_ref())?;
-    Ok(())
 }
 
+impl_get_settings!([
+    decrypted_mount_point,
+    decrypted_dir,
+    decrypted_dir_for_user,
+    host_identifier,
+    host_pubkey
+]);
+
 impl Profile {
-    pub fn get_decrypted_mount_point_path(&self) -> String {
-        self.settings.decrypted_mount_point.to_string()
-    }
-    pub fn get_decrypt_dir_path(&self) -> String {
-        self.settings.decrypted_dir.to_string()
-    }
-    pub fn get_decrypt_dir_path_for_user(&self) -> String {
-        self.settings.decrypted_dir_for_user.to_string()
-    }
     pub fn read_decrypted_mount_point(&self) -> std::io::Result<ReadDir> {
-        fs::read_dir(self.get_decrypted_mount_point_path())
+        fs::read_dir(self.decrypted_mount_point())
     }
 
     pub fn get_host_key_identity(&self) -> Result<age::ssh::Identity> {
@@ -90,7 +76,7 @@ impl Profile {
             Err(eyre!("key with type {} not found", KEY_TYPE))
         }
     }
-    pub fn get_host_recip(&self) -> Result<Rc<dyn Recipient>> {
+    pub fn _get_host_recip(&self) -> Result<Rc<dyn Recipient>> {
         let recip: RawRecip = self.settings.host_pubkey.clone().into();
         recip.try_into()
     }
@@ -108,12 +94,12 @@ impl Profile {
                     error!("{}", err);
                     return Err(eyre!(err));
                 }
-                let path = self.get_decrypted_mount_point_path();
-                info!("creating mount point {}", path.clone());
-                fs::create_dir_all(path.clone()).wrap_err_with(|| {
+                let path = self.decrypted_mount_point();
+                info!("creating mount point {}", path);
+                fs::create_dir_all(path).wrap_err_with(|| {
                     format!(
                         "creating decrypted mountpoint: {:?}",
-                        self.get_decrypted_mount_point_path()
+                        self.decrypted_mount_point()
                     )
                 })?;
                 Mount::builder()
@@ -121,7 +107,7 @@ impl Profile {
                     .flags(MountFlags::NOSUID)
                     .data("relatime")
                     .data("mode=751")
-                    .mount(String::default(), self.get_decrypted_mount_point_path())
+                    .mount(String::default(), self.decrypted_mount_point())
                     .map(|_| ()) // not needed.
                     .wrap_err(eyre!("mount tmpfs error"))
             }
@@ -153,7 +139,7 @@ impl Profile {
     /**
     extract secrets to `/run/vaultix.d/$num` and link to `/run/vaultix`
     */
-    pub fn deploy(self, early: bool) -> Result<()> {
+    pub fn deploy(&self, early: bool) -> Result<()> {
         if self.secrets.is_empty() && self.templates.is_empty() {
             info!("nothing needs to deploy. finish");
             return Ok(());
@@ -166,27 +152,23 @@ impl Profile {
 
         let if_early = |i: &String| -> bool { self.before_userborn.contains(i) == early };
 
-        let secrets_to_deploy = self.secrets.iter().filter(|i| if_early(i.0));
+        let secrets = self.secrets.values().filter(|i| if_early(&i.id));
 
-        let templates_map_iter = self.templates.iter().filter(|i| if_early(i.0));
+        let templates = self.templates.iter().filter(|i| if_early(i.0));
 
-        let plain_map: SecMap<Vec<u8>> =
-            SecMap::<SecPath<_, InStore>>::from_iter(secrets_to_deploy.into_iter().map(|(_, v)| v))
-                .renced_stored(
-                    self.settings.cache_in_store.clone().into(),
-                    self.settings.host_pubkey.as_str(),
-                )
-                .bake_ctx()?
-                .inner()
-                .into_iter()
-                .map(|(s, c)| (s, c.decrypt(host_prv_key).expect("err").inner()))
-                .collect();
+        let complete = CompleteProfile::from_iter(iter::once(self));
+        let ctx = RencCtx::create(&complete);
 
-        let generation_count = self.init_decrypted_mount_point()?;
+        let plain_map = RencBuilder::create(&complete)
+            .build_instore()
+            .renced_stored(&ctx, self.settings.cache_in_store.clone().into())
+            .bake_decrypted(host_prv_key)?;
+
+        let generation = self.init_decrypted_mount_point()?;
 
         let target_extract_dir_with_gen = {
-            let mut p = PathBuf::from(self.get_decrypted_mount_point_path());
-            p.push(generation_count.to_string());
+            let mut p = PathBuf::from(self.decrypted_mount_point());
+            p.push(generation.to_string());
 
             debug!("target extract dir with generation number: {:?}", p);
 
@@ -197,8 +179,8 @@ impl Profile {
                 ))
                 .inspect(|p| {
                     fs::set_permissions(p, Permissions::from_mode(0o751))
-                        .wrap_err(eyre!("set permission"))
-                        .expect("set permission");
+                        .wrap_err(eyre!("set permission failed"))
+                        .expect("permission issue");
                 })?
         };
         macro_rules! generate_dst {
@@ -214,7 +196,7 @@ impl Profile {
                     ret
                 } else {
                     if PathBuf::from($obj.path()).starts_with(&default_path) {
-                        spdlog::warn!(
+                        log::warn!(
                             "extract to decryptedDir detected. recommend specify `name` instead of `path`."
                         );
                     }
@@ -225,17 +207,18 @@ impl Profile {
         }
 
         // deploy general secrets
-        plain_map
-            .inner_ref()
-            .iter()
-            .map(|(n, c)| {
-                let ctx = SecBuf::<Plain>::new(c.clone());
-                let item = n as &dyn DeployFactor;
+        secrets
+            .map(|n| {
+                let raw_content = plain_map
+                    .get(n)
+                    .wrap_err_with(|| eyre!("decrypted content must found"))?;
+                let plain = SecBuf::<Plain>::new(raw_content.clone());
+                let item = &n as &dyn DeployFactor;
                 let dst: PathBuf = generate_dst!(item, self.settings, target_extract_dir_with_gen);
 
                 info!("secret {} -> {}", item.name(), dst.display(),);
 
-                deploy_to_fs(ctx, *n, dst)
+                plain.deploy_to_fs(n, dst)
             })
             .for_each(|res| {
                 if let Err(e) = res {
@@ -246,9 +229,8 @@ impl Profile {
 
         if !self.templates.is_empty() {
             info!("start templates deployment");
-            // new map with {{ hash }} String as key, ctx as value
-            let hashstr_ctx_map: HashMap<&str, &Vec<u8>> = plain_map
-                .inner_ref()
+            // new map with {{ hash }} String as key, content as value
+            let hashstr_content_map: HashMap<&str, &Vec<u8>> = plain_map
                 .iter()
                 .map(|(k, v)| {
                     self.placeholder
@@ -261,14 +243,14 @@ impl Profile {
                 })
                 .collect();
 
-            templates_map_iter
+            templates
                 .map(|(_, t)| {
                     let mut template = t.content.clone();
                     let hashstrs_of_it = t.parse_hash_str_list().expect("parse template");
 
                     let trim_the_insertial = t.trim;
 
-                    hashstr_ctx_map
+                    hashstr_content_map
                         .iter()
                         .filter(|(k, _)| {
                             let mut v = Vec::new();
@@ -279,7 +261,7 @@ impl Profile {
                         })
                         .for_each(|(k, v)| {
                             // render and insert
-                            trace!("template before process: {}", template);
+                            log::trace!("template before process: {}", template);
 
                             let raw_composed_insertial = String::from_utf8_lossy(v).to_string();
 
@@ -297,36 +279,34 @@ impl Profile {
                     let dst = generate_dst!(item, self.settings, target_extract_dir_with_gen);
 
                     info!("template {} -> {}", item.name(), dst.display(),);
-                    deploy_to_fs(SecBuf::<Plain>::new(template.into_bytes()), t, dst)
+                    SecBuf::<Plain>::new(template.into_bytes()).deploy_to_fs(t, dst)
                 })
                 .for_each(|res| {
                     if let Err(e) = res {
                         error!("{}", e);
                     }
                 });
-
-            info!("no template found. deploy finished");
+        } else {
+            info!("no template need to deploy. finished");
         }
 
         let symlink_dst = if early {
-            self.get_decrypt_dir_path_for_user()
+            self.decrypted_dir_for_user()
         } else {
-            self.get_decrypt_dir_path()
+            self.decrypted_dir()
         };
-        info!(
-            "link decrypted dir {} to {}",
-            target_extract_dir_with_gen.display(),
-            symlink_dst.as_str()
-        );
 
-        match std::fs::remove_file(&symlink_dst) {
+        match std::fs::remove_file(symlink_dst) {
             Err(e) if e.kind() == io::ErrorKind::NotFound => {}
-            Err(e) => Err(eyre!("{}", e))?,
-            Ok(_) => {
-                debug!("old symlink removed");
-            }
+            e @ Err(_) => e?,
+            _ => debug!("old symlink removed"),
         }
-        // link back to /run/vaultix*
+
+        info!(
+            "linking decrypted dir {} to {}",
+            target_extract_dir_with_gen.display(),
+            symlink_dst
+        );
         std::os::unix::fs::symlink(target_extract_dir_with_gen, symlink_dst)
             .wrap_err_with(|| "create symlink error")
     }

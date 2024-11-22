@@ -1,17 +1,33 @@
-use eyre::{eyre, Context, Result};
-use spdlog::{debug, error, info};
+use crate::{
+    interop::add_to_store,
+    parser::identity::{ParsedIdentity, RawIdentity},
+    profile::Profile,
+    util::secmap::{RencBuilder, RencCtx},
+};
+use age::Identity;
+use eyre::{eyre, Result};
+use log::{error, info};
 use std::{fs, path::PathBuf};
 
-use crate::{
-    helper::{
-        parse_identity::{ParsedIdentity, RawIdentity},
-        stored::Renc,
-    },
-    interop::add_to_store,
-    profile::Profile,
-};
+pub struct CompleteProfile<'a>(pub Vec<&'a Profile>);
 
-impl Profile {
+impl<'a> FromIterator<&'a Profile> for CompleteProfile<'a> {
+    fn from_iter<T: IntoIterator<Item = &'a Profile>>(iter: T) -> Self {
+        let mut v = Vec::new();
+        for i in iter.into_iter() {
+            v.push(i);
+        }
+        Self(v)
+    }
+}
+
+impl<'a> CompleteProfile<'a> {
+    pub fn _inner(self) -> Vec<&'a Profile> {
+        self.0
+    }
+    pub fn inner_ref(&self) -> &Vec<&Profile> {
+        &self.0
+    }
     /**
     read secret metadata from profile
 
@@ -21,11 +37,6 @@ impl Profile {
     and add to nix store.
     */
     pub fn renc(self, flake_root: PathBuf, identity: String, cache_path: PathBuf) -> Result<()> {
-        info!(
-            "rencrypt for host [{}]",
-            self.settings.host_identifier.clone()
-        );
-
         // check if flake root
         if !fs::read_dir(&flake_root)?.any(|e| {
             e.is_ok_and(|ie| {
@@ -40,48 +51,35 @@ impl Profile {
             ));
         };
 
-        // absolute path, in config directory, suffix host ident
-        let renc_path = {
-            let mut p = flake_root.clone();
-            p.push(cache_path);
-            // pretend err is not found
-            if p.canonicalize().is_err() {
-                fs::create_dir_all(&p).wrap_err_with(|| eyre!("create storageLocation error"))?
-            };
-            p.canonicalize()?;
-            debug!(
-                "reading user identity encrypted dir under flake root: {}",
-                p.display()
-            );
-            p
+        let ctx = RencCtx::create(&self);
+
+        let instance = {
+            let mut ret = RencBuilder::create(&self).build_inrepo(&ctx, cache_path.clone());
+            ret.clean_outdated(cache_path.clone())?;
+
+            ret.retain_noexist();
+            ret
         };
 
-        // from secrets metadata, from real config store
-        let data = Renc::create(
-            &self.secrets,
-            renc_path.clone(),
-            self.settings.host_pubkey.as_str(),
-        )
-        .filter_exist();
+        let key_pair: ParsedIdentity = RawIdentity::from(identity).try_into()?;
 
-        let key_pair: Result<ParsedIdentity> = RawIdentity::from(identity).try_into();
+        info!("re-encrypting...");
+        instance.makeup(&ctx, key_pair.identity.as_ref() as &dyn Identity)?;
+        info!("finish.");
 
-        let hostpub_recip = self.get_host_recip()?;
-
-        if let Err(e) = data
-            .map
-            .makeup(vec![hostpub_recip], key_pair?.get_identity())
-        {
-            return Err(eyre!("makeup error: {}", e));
-        } else {
-            let o = add_to_store(renc_path)?;
-            if !o.status.success() {
-                error!("Command executed with failing error code");
-            }
-            // Another side, calculate with nix `builtins.path` and pass to when deploy as `storage`
-            info!("path added to store: {}", String::from_utf8(o.stdout)?);
-        }
-
-        Ok(())
+        instance
+            .all_host_cache_in_repo(cache_path)
+            .into_iter()
+            .try_for_each(|i| {
+                info!("adding cache to store: {}", i.display());
+                let o = add_to_store(i)?;
+                if !o.status.success() {
+                    error!("Command executed with failing error code");
+                    // Another side, calculate with nix `builtins.path` and pass to when deploy as `storage`
+                    info!("path added to store: {}", String::from_utf8(o.stdout)?);
+                    return Err(eyre!("unexpected error"));
+                }
+                Ok(())
+            })
     }
 }

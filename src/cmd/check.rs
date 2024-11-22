@@ -1,28 +1,35 @@
-use eyre::Result;
-use spdlog::{debug, error};
+use eyre::{eyre, Context, ContextCompat, Result};
+use log::debug;
 
-use crate::{
-    helper::stored::{InStore, SecMap, SecPath},
-    profile::Profile,
-};
+use crate::util::secmap::{RencBuilder, RencCtx};
 
-impl Profile {
-    pub fn check(self) -> Result<()> {
-        SecMap::<SecPath<_, InStore>>::create(&self.secrets)
-            .renced_stored(
-                self.settings.cache_in_store.clone().into(),
-                self.settings.host_pubkey.as_str(),
-            )
+use super::renc::CompleteProfile;
+
+impl CompleteProfile<'_> {
+    pub fn check(&self) -> Result<()> {
+        let profile = self
+            .inner_ref()
+            .first()
+            .with_context(|| eyre::eyre!("deploy must only one host"))?;
+
+        let ctx = RencCtx::create(self);
+
+        RencBuilder::create(self)
+            .build_instore()
+            .renced_stored(&ctx, profile.settings.cache_in_store.clone().into())
             .inner()
             .into_values()
             .try_for_each(|p| {
                 debug!("checking in-store path: {}", p.path.display());
                 if !p.path.exists() {
-                    error!("path not found: {}", p.path.display());
-                    error!("Forget adding it to git?");
-                    error!("Please run renc and add new production to git");
-                    error!("See https://oluceps.github.io/vaultix/nix-apps.html#renc");
-                    return Err(eyre::eyre!("some secrets haven't been re-encrypted",));
+                    return Err(eyre!(
+                        "See https://oluceps.github.io/vaultix/nix-apps.html#renc"
+                    ))
+                    .wrap_err_with(|| eyre!("Please run renc and add new production to git"))
+                    .wrap_err_with(|| eyre!("Forget adding it to git?"))
+                    .wrap_err_with(|| {
+                        eyre::eyre!("secrets haven't been re-encrypted: {}", p.path.display())
+                    });
                 }
                 Ok(())
             })

@@ -1,5 +1,6 @@
 - [ ] multilingual docs
 - [ ] restart/reload sd unit control (after systemd varlink api)
+- [x] reduce duplicated reads
 - [x] secrets for users
 - [x] optimize template placeholder map get
 - [x] test with os

@@ -1,4 +1,6 @@
+pub mod identity;
 mod permission;
+pub mod recipient;
 mod template;
 
 pub use permission::parse_octal_str;

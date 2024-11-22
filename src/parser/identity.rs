@@ -2,7 +2,7 @@ use age::{Identity, IdentityFile, Recipient};
 use eyre::{eyre, ContextCompat};
 use serde::Deserialize;
 
-use super::callback::UiCallbacks;
+use super::super::util::callback::UiCallbacks;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct RawIdentity(String);
@@ -25,7 +25,7 @@ impl ParsedIdentity {
             recipient,
         }
     }
-    pub fn get_identity(&self) -> &dyn Identity {
+    pub fn _get_identity(&self) -> &dyn Identity {
         self.identity.as_ref()
     }
     pub fn _get_recipient(&self) -> &dyn Recipient {

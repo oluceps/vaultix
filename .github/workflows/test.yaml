@@ -1,0 +1,48 @@
+name: Test
+on:
+  pull_request:
+    branches: ["*"]
+    paths-ignore:
+      - '**/*.md'
+  push:
+    branches: ["main", "dev"]
+    paths-ignore:
+      - '**/*.md'
+
+jobs:
+  miri:
+    name: UB Detection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Miri
+        run: |
+          rustup toolchain install nightly --component miri
+          rustup override set nightly
+          cargo miri setup
+      - name: Test with Miri
+        run: cargo miri test
+  fuzzy:
+    name: Fuzzy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test
+        run: |
+          rustup default nightly
+          cargo install cargo-fuzz
+          cargo fuzz run --all-features fuzz_parser_1 -- -max_len=256 -runs=16777216
+  vm:
+    name: VM Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      id-token: "write"
+      contents: "read"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Run os for test
+        run: nix run github:nix-community/nixos-anywhere -- --flake .#tester --vm-test
+

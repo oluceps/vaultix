@@ -1,4 +1,7 @@
 #![feature(iterator_try_collect)]
-mod parser;
-pub use parser::extract_all_hashes;
-pub use parser::parse_octal_str;
+mod parser {
+    pub mod permission;
+    pub mod template;
+}
+pub use parser::permission::parse_octal_str;
+pub use parser::template::extract_all_hashes;

@@ -1,6 +1,6 @@
 use eyre::{eyre, Result};
 use libc::{fchown, getgrnam, getpwnam};
-use spdlog::warn;
+use log::warn;
 use std::{ffi::CString, fs::File, os::fd::AsRawFd};
 
 pub fn set_owner_and_group(file: &File, owner: &str, group: &str) -> Result<()> {

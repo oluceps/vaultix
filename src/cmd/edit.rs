@@ -5,17 +5,22 @@ use std::{
     rc::Rc,
 };
 
-use crate::helper::{
-    parse_identity::{ParsedIdentity, RawIdentity},
-    parse_recipient::RawRecip,
-    secret_buf::{AgeEnc, Plain, SecBuf},
-    stored::{GetSec, InCfg, SecPath},
+use crate::util::{
+    secbuf::{AgeEnc, Plain, SecBuf},
+    secmap::{GetSec, SecPath},
+};
+use crate::{
+    parser::{
+        identity::{ParsedIdentity, RawIdentity},
+        recipient::RawRecip,
+    },
+    util::secmap::InRepo,
 };
 
 use age::Recipient;
 use eyre::{eyre, Context, ContextCompat};
+use log::info;
 use nom::AsBytes;
-use spdlog::info;
 
 use super::EditSubCmd;
 
@@ -23,14 +28,14 @@ pub fn edit(arg: EditSubCmd) -> eyre::Result<()> {
     let EditSubCmd {
         file,
         identity,
-        recipients,
+        recipient,
     } = arg;
 
     let id_parsed: ParsedIdentity = identity
         .with_context(|| eyre!("must provide identity to decrypt content"))
         .and_then(|i| RawIdentity::from(i).try_into())?;
     let recips = {
-        let mut ret = recipients
+        let mut ret = recipient
             .into_iter()
             .map(|s| RawRecip::from(s).try_into().expect("convert"))
             .collect::<Vec<Rc<dyn Recipient>>>();
@@ -39,7 +44,7 @@ pub fn edit(arg: EditSubCmd) -> eyre::Result<()> {
     };
 
     if PathBuf::from(&file).exists() {
-        let buf = SecPath::<String, InCfg>::new(file.clone())
+        let buf = SecPath::<String, InRepo>::new(file.clone())
             .read_buffer()
             .map(SecBuf::<AgeEnc>::from)?
             .decrypt(id_parsed.identity.as_ref())?

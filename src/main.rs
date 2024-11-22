@@ -1,26 +1,26 @@
 #![feature(iterator_try_collect)]
 use cmd::Args;
 use eyre::Result;
-use spdlog::formatter::{pattern, PatternFormatter};
+use simple_logger::SimpleLogger;
 
 mod cmd;
-mod helper;
+mod util {
+    pub mod callback;
+    pub mod secbuf;
+    pub mod secmap;
+    pub mod set_owner_group;
+}
 mod interop;
 mod parser;
 mod profile;
-use std::os::unix::process::parent_id;
 
 fn main() -> Result<()> {
-    let _ = spdlog::init_env_level();
-    let as_sd_unit = parent_id() == 1;
-    if as_sd_unit {
-        for sink in spdlog::default_logger().sinks() {
-            sink.set_formatter(Box::new(PatternFormatter::new(pattern!(
-                "{^{level}} - {payload}{eol}"
-            ))))
-        }
-        spdlog::debug!("Detected running as systemd unit");
-    }
+    SimpleLogger::new()
+        .without_timestamps()
+        .with_level(log::LevelFilter::Info)
+        .env()
+        .init()?;
+
     let args: Args = argh::from_env();
     args.ayaya()
 }
