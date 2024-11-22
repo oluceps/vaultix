@@ -2,6 +2,7 @@ use std::{
     collections::HashMap,
     fs::{self, Permissions, ReadDir},
     io::{self, ErrorKind},
+    iter,
     os::unix::fs::PermissionsExt,
     path::PathBuf,
     rc::Rc,
@@ -155,7 +156,7 @@ impl Profile {
 
         let templates = self.templates.iter().filter(|i| if_early(i.0));
 
-        let complete = CompleteProfile(vec![self]);
+        let complete = CompleteProfile::from_iter(iter::once(self));
         let ctx = RencCtx::create(&complete);
 
         let plain_map = RencBuilder::create(&complete)
@@ -178,8 +179,8 @@ impl Profile {
                 ))
                 .inspect(|p| {
                     fs::set_permissions(p, Permissions::from_mode(0o751))
-                        .wrap_err(eyre!("set permission"))
-                        .expect("set permission");
+                        .wrap_err(eyre!("set permission failed"))
+                        .expect("permission issue");
                 })?
         };
         macro_rules! generate_dst {
@@ -297,10 +298,8 @@ impl Profile {
 
         match std::fs::remove_file(symlink_dst) {
             Err(e) if e.kind() == io::ErrorKind::NotFound => {}
-            Err(e) => Err(eyre!("{}", e))?,
-            Ok(_) => {
-                debug!("old symlink removed");
-            }
+            e @ Err(_) => e?,
+            _ => debug!("old symlink removed"),
         }
 
         info!(

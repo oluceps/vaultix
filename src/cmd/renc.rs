@@ -11,9 +11,9 @@ use std::{fs, path::PathBuf};
 
 pub struct CompleteProfile<'a>(pub Vec<&'a Profile>);
 
-impl<'a> From<Vec<&'a Profile>> for CompleteProfile<'a> {
-    fn from(value: Vec<&'a Profile>) -> Self {
-        Self(value)
+impl<'a> FromIterator<&'a Profile> for CompleteProfile<'a> {
+    fn from_iter<T: IntoIterator<Item = &'a Profile>>(iter: T) -> Self {
+        iter.into_iter().collect()
     }
 }
 

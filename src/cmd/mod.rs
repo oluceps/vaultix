@@ -101,10 +101,9 @@ impl Args {
         match &self.app {
             SubCmd::Renc(RencSubCmd { identity, cache }) => {
                 debug!("start re-encrypt secrets");
-                let real_profile = profile()?;
-                let profile: Vec<&Profile> = real_profile.iter().collect();
-                CompleteProfile::from(profile).renc(
-                    flake_root.clone(),
+                let profile = profile()?;
+                CompleteProfile::from_iter(&profile).renc(
+                    flake_root,
                     identity.clone(),
                     cache.into(),
                 )
@@ -123,9 +122,8 @@ impl Args {
             }
             SubCmd::Check(_) => {
                 info!("start checking");
-                let real_profile = profile()?;
-                let profile = real_profile.iter().collect();
-                CompleteProfile(profile).check()?;
+                let profile = profile()?;
+                CompleteProfile::from_iter(&profile).check()?;
                 info!("check complete");
                 Ok(())
             }
