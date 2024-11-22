@@ -5,7 +5,6 @@ use std::{
     iter,
     os::unix::fs::PermissionsExt,
     path::PathBuf,
-    rc::Rc,
 };
 
 use crate::{
@@ -76,7 +75,7 @@ impl Profile {
             Err(eyre!("key with type {} not found", KEY_TYPE))
         }
     }
-    pub fn _get_host_recip(&self) -> Result<Rc<dyn Recipient>> {
+    pub fn _get_host_recip(&self) -> Result<Box<dyn Recipient>> {
         let recip: RawRecip = self.settings.host_pubkey.clone().into();
         recip.try_into()
     }

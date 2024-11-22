@@ -1,8 +1,8 @@
 use std::{
     fs::{self, OpenOptions},
     io::Write,
+    iter,
     path::PathBuf,
-    rc::Rc,
 };
 
 use crate::util::{
@@ -34,14 +34,11 @@ pub fn edit(arg: EditSubCmd) -> eyre::Result<()> {
     let id_parsed: ParsedIdentity = identity
         .with_context(|| eyre!("must provide identity to decrypt content"))
         .and_then(|i| RawIdentity::from(i).try_into())?;
-    let recips = {
-        let mut ret = recipient
-            .into_iter()
-            .map(|s| RawRecip::from(s).try_into().expect("convert"))
-            .collect::<Vec<Rc<dyn Recipient>>>();
-        ret.push(Rc::from(id_parsed.recipient));
-        ret
-    };
+    let recips: Vec<Box<dyn Recipient>> = recipient
+        .into_iter()
+        .map(|s| TryInto::<Box<dyn Recipient>>::try_into(RawRecip::from(s)).expect("convert"))
+        .chain::<std::iter::Once<Box<dyn Recipient>>>(iter::once(id_parsed.recipient))
+        .collect();
 
     if PathBuf::from(&file).exists() {
         let buf = SecPath::<String, InRepo>::new(file.clone())
@@ -60,7 +57,7 @@ pub fn edit(arg: EditSubCmd) -> eyre::Result<()> {
             }
 
             SecBuf::<Plain>::new(edited.into_bytes())
-                .encrypt(recips)?
+                .encrypt(recips.iter().map(|i| i.as_ref()))?
                 .inner()
         };
         let mut file = OpenOptions::new().write(true).truncate(true).open(&file)?;
@@ -73,7 +70,7 @@ pub fn edit(arg: EditSubCmd) -> eyre::Result<()> {
         let edited = edit::edit(vec![])?;
 
         SecBuf::<Plain>::new(edited.into_bytes())
-            .encrypt(recips)?
+            .encrypt(recips.iter().map(|i| i.as_ref()))?
             .inner()
     };
 

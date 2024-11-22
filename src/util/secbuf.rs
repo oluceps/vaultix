@@ -2,7 +2,6 @@ use std::fs::{OpenOptions, Permissions};
 use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
-use std::rc::Rc;
 use std::{io::Read, iter, marker::PhantomData};
 
 use age::{Identity, Recipient};
@@ -67,10 +66,10 @@ impl<T> From<Vec<u8>> for SecBuf<T> {
 }
 
 impl SecBuf<AgeEnc> {
-    pub fn renc(
+    pub fn renc<'a>(
         &self,
         ident: &dyn Identity,
-        recips: Vec<Rc<dyn Recipient>>,
+        recips: impl Iterator<Item = &'a dyn Recipient>,
     ) -> Result<SecBuf<HostEnc>> {
         self.decrypt(ident).and_then(|d| d.encrypt(recips))
     }
@@ -82,10 +81,12 @@ use super::set_owner_group;
 
 impl SecBuf<Plain> {
     /// encrypt with host pub key, ssh key
-    pub fn encrypt(self, recips: Vec<Rc<dyn Recipient>>) -> Result<SecBuf<HostEnc>> {
-        let recips_iter = recips.iter().map(|boxed| boxed.as_ref() as &dyn Recipient);
-        let encryptor = age::Encryptor::with_recipients(recips_iter)
-            .map_err(|_| eyre!("create encryptor err"))?;
+    pub fn encrypt<'a>(
+        self,
+        recips: impl Iterator<Item = &'a dyn Recipient>,
+    ) -> Result<SecBuf<HostEnc>> {
+        let encryptor =
+            age::Encryptor::with_recipients(recips).map_err(|_| eyre!("create encryptor err"))?;
 
         let buf = self.buf_ref();
         let mut enc_content = vec![];
@@ -154,14 +155,7 @@ mod tests {
         // 0x01
         let new_recip_str = "age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs3290gq";
         let buf = SecBuf::<AgeEnc>::new(encrypted);
-        let _ = buf
-            .renc(
-                &key as &dyn Identity,
-                vec![
-                    Rc::new(age::x25519::Recipient::from_str(new_recip_str).unwrap())
-                        as Rc<dyn Recipient>,
-                ],
-            )
-            .unwrap();
+        let r = &age::x25519::Recipient::from_str(new_recip_str).unwrap() as &dyn Recipient;
+        let _ = buf.renc(&key as &dyn Identity, iter::once(r)).unwrap();
     }
 }

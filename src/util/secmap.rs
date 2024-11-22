@@ -3,6 +3,7 @@ use std::{
     fmt,
     fs::File,
     io::{self, Read},
+    iter,
     path::{Path, PathBuf},
     str::FromStr,
 };
@@ -13,7 +14,7 @@ use crate::{
     profile::{self, Secret},
     util::secbuf::AgeEnc,
 };
-use age::Identity;
+use age::{Identity, Recipient};
 use eyre::{eyre, Result};
 use eyre::{Context, ContextCompat};
 use log::debug;
@@ -305,7 +306,8 @@ impl<'a> RencInst<'a, InRepo> {
                     .get(s)
                     .with_context(|| eyre!("encrypted buf not found"))?;
 
-                let host_ssh_recip = RawRecip::from(String::from_str(host.recip())?).try_into()?;
+                let host_ssh_recip: Box<dyn Recipient> =
+                    RawRecip::from(String::from_str(host.recip())?).try_into()?;
 
                 std::fs::create_dir_all(sec_path.path.parent().expect("must have"))?;
                 let mut target_file = std::fs::OpenOptions::new()
@@ -315,7 +317,10 @@ impl<'a> RencInst<'a, InRepo> {
                     .open(sec_path.path.clone())?;
 
                 target_file
-                    .write_all(buf.renc(ident, vec![host_ssh_recip])?.buf_ref())
+                    .write_all(
+                        buf.renc(ident, iter::once(host_ssh_recip.as_ref()))?
+                            .buf_ref(),
+                    )
                     .with_context(|| eyre!("write renc file error"))
             })
     }

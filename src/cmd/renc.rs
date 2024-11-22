@@ -61,11 +61,16 @@ impl<'a> CompleteProfile<'a> {
             ret
         };
 
-        let key_pair: ParsedIdentity = RawIdentity::from(identity).try_into()?;
+        let ParsedIdentity {
+            identity,
+            recipient: _,
+        } = RawIdentity::from(identity).try_into()?;
 
-        info!("re-encrypting...");
-        instance.makeup(&ctx, key_pair.identity.as_ref() as &dyn Identity)?;
-        info!("finish.");
+        let id = identity.as_ref() as &dyn Identity;
+
+        instance.makeup(&ctx, id)?;
+
+        info!("finish");
 
         instance
             .all_host_cache_in_repo(cache_path)
