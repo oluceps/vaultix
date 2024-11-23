@@ -6,6 +6,7 @@ use std::{
     path::{Path, PathBuf},
     rc::Rc,
     str::FromStr,
+    sync::{Arc, RwLock},
 };
 
 use crate::{
@@ -18,10 +19,11 @@ use age::{Identity, Recipient};
 use eyre::{eyre, Result};
 use eyre::{Context, ContextCompat};
 use log::debug;
+use nom::AsBytes;
 use papaya::HashMap;
 use std::marker::PhantomData;
 
-use super::secbuf::{HostEnc, SecBuf};
+use super::secbuf::{HostEnc, Plain, SecBuf};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct SecPath<P: AsRef<Path>, T> {
@@ -121,9 +123,6 @@ impl<'a, W> RencInst<'a, W> {
     }
     fn inner_ref(&self) -> &HashMap<(&'a Secret, HostInfo<'a>), SecPathBuf<W>> {
         &self.0
-    }
-    fn inner_ref_mut(&mut self) -> &mut HashMap<(&'a Secret, HostInfo<'a>), SecPathBuf<W>> {
-        &mut self.0
     }
     fn have(&self, p: &PathBuf) -> bool {
         for ip in self.inner_ref().pin().values() {
@@ -307,40 +306,63 @@ impl<'a> RencInst<'a, InRepo> {
     }
 
     /// retain non exist path
-    pub fn retain_noexist(&mut self) {
-        self.inner_ref_mut().pin().retain(|_, v| !v.path.exists())
+    pub fn retain_noexist(&self) {
+        self.inner_ref().pin().retain(|_, v| !v.path.exists())
     }
 
     pub fn makeup(&self, ctx: &RencCtx<'a, AgeEnc>, ident: Box<dyn Identity>) -> Result<()> {
         let key: Rc<dyn Identity> = Rc::from(ident);
-        self.inner_ref()
-            .pin()
-            .iter()
-            .try_for_each(|((s, host), sec_path)| {
-                use std::io::Write;
 
-                debug!("rencrypt [{}]", sec_path.path.display());
+        let material = self.inner_ref();
+        let mat_ref = material.pin();
+
+        let the_map: Arc<HashMap<&SecPathBuf<InRepo>, RwLock<SecBuf<Plain>>>> = Arc::new(
+            mat_ref
+                .iter()
+                .map(|((sec, _), path)| {
+                    ctx.inner_ref()
+                        .pin()
+                        .get(sec)
+                        .with_context(|| eyre!("encrypted buf not found"))
+                        .and_then(|buf_agenc| buf_agenc.decrypt(key.clone().as_ref()))
+                        .and_then(|b| Ok((path, RwLock::new(b))))
+                })
+                .try_collect()?,
+        );
+
+        use std::io::Write;
+
+        std::thread::scope(|s| {
+            for ((_, host), inrepo_path) in mat_ref.iter() {
+                let dst_ctt_map = the_map.clone();
+
                 let host_ssh_recip: Box<dyn Recipient + Send> =
-                    RawRecip::from(String::from_str(host.recip())?).try_into()?;
+                    RawRecip::from(String::from_str(host.recip()).unwrap())
+                        .try_into()
+                        .unwrap();
 
-                std::fs::create_dir_all(sec_path.path.parent().expect("must have"))?;
-                let mut target_file = std::fs::OpenOptions::new()
-                    .write(true)
-                    .create(true)
-                    .truncate(true)
-                    .open(sec_path.path.clone())?;
+                debug!("rencrypt [{}]", inrepo_path.path.display());
+                std::fs::create_dir_all(inrepo_path.path.parent().expect("must have")).unwrap();
 
-                target_file
-                    .write_all(
-                        ctx.inner_ref()
-                            .pin()
-                            .get(s)
-                            .with_context(|| eyre!("encrypted buf not found"))?
-                            .renc(key.clone().as_ref(), iter::once(host_ssh_recip.as_ref()))?
-                            .buf_ref(),
-                    )
-                    .with_context(|| eyre!("write renc file error"))
-            })
+                s.spawn(move || {
+                    let mut target_file = std::fs::OpenOptions::new()
+                        .write(true)
+                        .create(true)
+                        .truncate(true)
+                        .open(inrepo_path.path.clone())
+                        .expect("yes");
+                    let dst_ctt_map_ref = dst_ctt_map.pin();
+                    let buf = dst_ctt_map_ref.get(inrepo_path).expect("").read().unwrap();
+                    let ctt = buf
+                        .clone()
+                        .encrypt(iter::once(host_ssh_recip.as_ref()))
+                        .unwrap();
+
+                    target_file.write_all(ctt.inner().as_bytes()).unwrap();
+                });
+            }
+        });
+        Ok(())
     }
 }
 

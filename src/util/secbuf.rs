@@ -66,6 +66,7 @@ impl<T> From<Vec<u8>> for SecBuf<T> {
 }
 
 impl SecBuf<AgeEnc> {
+    #[cfg(test)]
     pub fn renc<'a>(
         &self,
         ident: &dyn Identity,

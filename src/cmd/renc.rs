@@ -53,7 +53,7 @@ impl<'a> CompleteProfile<'a> {
         let ctx = RencCtx::create(&self);
 
         let instance = {
-            let mut ret = RencBuilder::create(&self).build_inrepo(&ctx, cache_path.clone());
+            let ret = RencBuilder::create(&self).build_inrepo(&ctx, cache_path.clone());
             ret.clean_outdated(cache_path.clone())?;
 
             ret.retain_noexist();
