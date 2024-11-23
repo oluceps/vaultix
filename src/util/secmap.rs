@@ -4,8 +4,8 @@ use std::{
     io::{self, Read},
     iter,
     path::{Path, PathBuf},
+    rc::Rc,
     str::FromStr,
-    sync::{Arc, Mutex, RwLock},
 };
 
 use crate::{
@@ -245,29 +245,23 @@ impl<'a> RencInst<'a, InStore> {
             .into()
     }
     /// read secret file
-    pub fn bake_decrypted(
-        self,
-        ident: Box<dyn Identity + Send + Sync>,
-    ) -> Result<Arc<HashMap<&'a Secret, Vec<u8>>>> {
-        let self_arc = Arc::new(self.inner());
-        let self_arc_ref = self_arc.pin();
-        let ret: Arc<HashMap<&Secret, Vec<u8>>> = Arc::new(HashMap::new());
-        let id = Arc::new(RwLock::new(ident));
-
-        std::thread::scope(|s| {
-            for ((k, _), v) in self_arc_ref.into_iter() {
-                s.spawn(move || {
-                    ret.pin().insert(
-                        k,
-                        v.read_buffer()
-                            .and_then(|i| SecBuf::<HostEnc>::from(i).decrypt(id))
-                            .expect("decrypt must sussess")
+    pub fn bake_decrypted(self, ident: Box<dyn Identity>) -> Result<HashMap<&'a Secret, Vec<u8>>> {
+        let the = self.inner();
+        let the_ref = the.pin();
+        the_ref
+            .into_iter()
+            .map(|(k, v)| {
+                v.read_buffer().map(|b| {
+                    (
+                        k.0,
+                        SecBuf::<HostEnc>::from(b)
+                            .decrypt(ident.as_ref())
+                            .expect("must")
                             .inner(),
-                    );
-                });
-            }
-        });
-        Ok(ret)
+                    )
+                })
+            })
+            .try_collect::<HashMap<&'a Secret, Vec<u8>>>()
     }
 }
 
@@ -317,12 +311,8 @@ impl<'a> RencInst<'a, InRepo> {
         self.inner_ref_mut().pin().retain(|_, v| !v.path.exists())
     }
 
-    pub fn makeup(
-        &self,
-        ctx: &RencCtx<'a, AgeEnc>,
-        ident: Box<dyn Identity + Send + Sync>,
-    ) -> Result<()> {
-        let key = Arc::new(RwLock::new(ident));
+    pub fn makeup(&self, ctx: &RencCtx<'a, AgeEnc>, ident: Box<dyn Identity>) -> Result<()> {
+        let key: Rc<dyn Identity> = Rc::from(ident);
         self.inner_ref()
             .pin()
             .iter()
@@ -330,7 +320,7 @@ impl<'a> RencInst<'a, InRepo> {
                 use std::io::Write;
 
                 debug!("rencrypt [{}]", sec_path.path.display());
-                let host_ssh_recip: Box<dyn Recipient> =
+                let host_ssh_recip: Box<dyn Recipient + Send> =
                     RawRecip::from(String::from_str(host.recip())?).try_into()?;
 
                 std::fs::create_dir_all(sec_path.path.parent().expect("must have"))?;
@@ -346,7 +336,7 @@ impl<'a> RencInst<'a, InRepo> {
                             .pin()
                             .get(s)
                             .with_context(|| eyre!("encrypted buf not found"))?
-                            .renc(key.clone(), iter::once(host_ssh_recip.as_ref()))?
+                            .renc(key.clone().as_ref(), iter::once(host_ssh_recip.as_ref()))?
                             .buf_ref(),
                     )
                     .with_context(|| eyre!("write renc file error"))

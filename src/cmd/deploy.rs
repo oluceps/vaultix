@@ -75,7 +75,7 @@ impl Profile {
             Err(eyre!("key with type {} not found", KEY_TYPE))
         }
     }
-    pub fn _get_host_recip(&self) -> Result<Box<dyn Recipient>> {
+    pub fn _get_host_recip(&self) -> Result<Box<dyn Recipient + Send>> {
         let recip: RawRecip = self.settings.host_pubkey.clone().into();
         recip.try_into()
     }

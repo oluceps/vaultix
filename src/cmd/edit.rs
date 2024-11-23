@@ -3,7 +3,6 @@ use std::{
     io::Write,
     iter,
     path::PathBuf,
-    sync::{Arc, RwLock},
 };
 
 use crate::util::{
@@ -35,10 +34,12 @@ pub fn edit(arg: EditSubCmd) -> eyre::Result<()> {
     let id_parsed: ParsedIdentity = identity
         .with_context(|| eyre!("must provide identity to decrypt content"))
         .and_then(|i| RawIdentity::from(i).try_into())?;
-    let recips: Vec<Box<dyn Recipient>> = recipient
+    let recips: Vec<Box<dyn Recipient + Send>> = recipient
         .into_iter()
-        .map(|s| TryInto::<Box<dyn Recipient>>::try_into(RawRecip::from(s)).expect("convert"))
-        .chain::<std::iter::Once<Box<dyn Recipient>>>(iter::once(id_parsed.recipient))
+        .map(|s| {
+            TryInto::<Box<dyn Recipient + Send>>::try_into(RawRecip::from(s)).expect("convert")
+        })
+        .chain::<std::iter::Once<Box<dyn Recipient + Send>>>(iter::once(id_parsed.recipient))
         .collect();
     let decrypt = |v: Vec<u8>| -> eyre::Result<Vec<u8>> {
         Ok(SecBuf::<Plain>::new(v)
@@ -50,7 +51,7 @@ pub fn edit(arg: EditSubCmd) -> eyre::Result<()> {
         let buf = SecPath::<String, InRepo>::new(file.clone())
             .read_buffer()
             .map(SecBuf::<AgeEnc>::from)?
-            .decrypt(Arc::new(RwLock::new(id_parsed.identity)))?
+            .decrypt(id_parsed.identity.as_ref())?
             .inner();
         let pre_hash = blake3::hash(buf.as_slice());
 
