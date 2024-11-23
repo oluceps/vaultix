@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     fs::{self, Permissions, ReadDir},
     io::{self, ErrorKind},
     iter,
@@ -22,6 +21,7 @@ use eyre::{eyre, Context, ContextCompat, Result};
 use hex::decode;
 use lib::extract_all_hashes;
 use log::{debug, error, info};
+use papaya::HashMap;
 use sys_mount::{Mount, MountFlags, SupportedFilesystems};
 
 impl HostKey {
@@ -162,6 +162,7 @@ impl Profile {
             .build_instore()
             .renced_stored(&ctx, self.settings.cache_in_store.clone().into())
             .bake_decrypted(host_prv_key)?;
+        let plain_map = plain_map.pin();
 
         let generation = self.init_decrypted_mount_point()?;
 
@@ -250,6 +251,7 @@ impl Profile {
                     let trim_the_insertial = t.trim;
 
                     hashstr_content_map
+                        .pin()
                         .iter()
                         .filter(|(k, _)| {
                             let mut v = Vec::new();

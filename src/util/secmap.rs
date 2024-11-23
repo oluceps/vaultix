@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     fmt,
     fs::File,
     io::{self, Read},
@@ -18,6 +17,7 @@ use age::{Identity, Recipient};
 use eyre::{eyre, Result};
 use eyre::{Context, ContextCompat};
 use log::debug;
+use papaya::HashMap;
 use std::marker::PhantomData;
 
 use super::secbuf::{HostEnc, SecBuf};
@@ -125,7 +125,7 @@ impl<'a, W> RencInst<'a, W> {
         &mut self.0
     }
     fn have(&self, p: &PathBuf) -> bool {
-        for ip in self.inner_ref().values() {
+        for ip in self.inner_ref().pin().values() {
             if &ip.path == p {
                 return true;
             }
@@ -135,7 +135,7 @@ impl<'a, W> RencInst<'a, W> {
     pub fn all_host_cache_in_repo(&self, cache_dir: PathBuf) -> Vec<PathBuf> {
         let mut ret = Vec::new();
 
-        self.inner_ref().iter().for_each(|((_, y), _)| {
+        self.inner_ref().pin().iter().for_each(|((_, y), _)| {
             let mut c = cache_dir.clone();
             c.push(y.id());
             if !ret.contains(&c) {
@@ -164,11 +164,17 @@ impl<'a> RencBuilder<'a> {
 
         // (S, P(S)) - [host]
         let b: HashMap<(&Secret, SecPathBuf<InStore>), Vec<HostInfo>> =
-            a.iter().fold(HashMap::new(), |mut acc, (x, y)| {
-                y.iter().for_each(|(n, i)| {
-                    acc.entry((*n, i.clone()))
-                        .and_modify(|i| i.push(x.clone()))
-                        .or_insert_with(|| vec![x.clone()]);
+            a.pin().iter().fold(HashMap::new(), |acc, (x, y)| {
+                y.pin().iter().for_each(|(n, i)| {
+                    acc.pin().update_or_insert_with(
+                        (*n, i.clone()),
+                        |i| {
+                            let mut prev = i.clone();
+                            prev.extend([x.clone()]);
+                            i.clone()
+                        },
+                        || vec![x.clone()],
+                    );
                 });
                 acc
             });
@@ -180,39 +186,51 @@ impl<'a> RencBuilder<'a> {
         ctx: &'a RencCtx<'a, AgeEnc>,
         cache_dir: PathBuf,
     ) -> RencInst<'a, InRepo> {
-        RencInst::<'_, InRepo>(self.0.iter().fold(HashMap::new(), |mut acc, ((x, _), z)| {
-            z.iter().for_each(|h| {
-                let hash = ctx.0.get(x).expect("").hash_with(h.recip());
-                let in_repo = {
-                    let mut p: PathBuf = cache_dir.clone();
-                    p.push(h.0);
-                    p.push(hash.to_string());
-                    SecPathBuf::<InRepo>::new(p)
-                };
-                acc.entry((*x, h.clone())).or_insert_with(|| in_repo);
-            });
-            acc
-        }))
+        RencInst::<'_, InRepo>(
+            self.0
+                .pin()
+                .iter()
+                .fold(HashMap::new(), |acc, ((x, _), z)| {
+                    z.iter().for_each(|h| {
+                        let hash = ctx.0.pin().get(x).expect("").hash_with(h.recip());
+                        let in_repo = {
+                            let mut p: PathBuf = cache_dir.clone();
+                            p.push(h.0);
+                            p.push(hash.to_string());
+                            SecPathBuf::<InRepo>::new(p)
+                        };
+                        acc.pin().insert((*x, h.clone()), in_repo);
+                    });
+                    acc
+                }),
+        )
     }
 
     pub fn build_instore(self) -> RencInst<'a, InStore> {
-        RencInst::<'_, InStore>(self.0.iter().fold(HashMap::new(), |mut acc, ((x, y), z)| {
-            z.iter().for_each(|h| {
-                acc.entry((*x, h.clone())).or_insert_with(|| y.clone());
-            });
-            acc
-        }))
+        RencInst::<'_, InStore>(
+            self.0
+                .pin()
+                .iter()
+                .fold(HashMap::new(), |acc, ((x, y), z)| {
+                    z.iter().for_each(|h| {
+                        acc.pin().insert((*x, h.clone()), y.clone());
+                    });
+                    acc
+                }),
+        )
     }
 }
 impl<'a> RencInst<'a, InStore> {
     /// return self but processed the path to produce in-store cache/host/[hash] map
     pub fn renced_stored(self, ctx: &RencCtx<'a, AgeEnc>, host_cache_stored: PathBuf) -> Self {
         self.inner()
+            .pin()
             .into_iter()
             .map(|((x, y), _)| {
                 let mut dir = host_cache_stored.clone();
                 let sec_hash = ctx
                     .inner_ref()
+                    .pin()
                     .get(x)
                     .expect("must have")
                     .hash_with(y.recip())
@@ -220,7 +238,7 @@ impl<'a> RencInst<'a, InStore> {
 
                 dir.push(sec_hash);
 
-                ((x, y), SecPath::new(dir))
+                ((*x, y.clone()), SecPath::new(dir))
             })
             .collect::<HashMap<(&'a Secret, HostInfo<'a>), SecPathBuf<InStore>>>()
             .into()
@@ -228,6 +246,7 @@ impl<'a> RencInst<'a, InStore> {
     /// read secret file
     pub fn bake_decrypted(self, ident: &dyn Identity) -> Result<HashMap<&'a Secret, Vec<u8>>> {
         self.inner()
+            .pin()
             .into_iter()
             .map(|(k, v)| {
                 v.read_buffer().map(|b| {
@@ -246,59 +265,58 @@ impl<'a> RencInst<'a, InStore> {
 
 impl<'a> RencInst<'a, InRepo> {
     pub fn clean_outdated(&self, cache_dir: PathBuf) -> Result<()> {
-        let hosts: Vec<&HostInfo<'a>> = self.inner_ref().keys().map(|(_, v)| v).collect();
+        self.inner_ref()
+            .pin()
+            .keys()
+            .map(|(_, v)| v)
+            .try_for_each(|h| {
+                let host_cache_dir = {
+                    let mut c = cache_dir.clone();
+                    c.push(h.0);
+                    c
+                };
+                let dir = std::fs::read_dir(host_cache_dir);
 
-        hosts.iter().try_for_each(|h| {
-            let host_cache_dir = {
-                let mut c = cache_dir.clone();
-                c.push(h.0);
-                c
-            };
-            let dir = std::fs::read_dir(host_cache_dir);
-
-            if let Err(ref e) = dir {
-                if e.kind() == io::ErrorKind::NotFound {
-                    return Ok(());
+                if let Err(ref e) = dir {
+                    if e.kind() == io::ErrorKind::NotFound {
+                        return Ok(());
+                    }
                 }
-            }
 
-            let dir = dir?;
+                let dir = dir?;
 
-            let tobe_clean = dir.filter_map(|entry| {
-                let entry = entry.ok()?;
-                let path = entry.path();
-                if path.is_file() && !self.have(&path) {
-                    Some(path)
-                } else {
-                    None
+                let tobe_clean = dir.filter_map(|entry| {
+                    let entry = entry.ok()?;
+                    let path = entry.path();
+                    if path.is_file() && !self.have(&path) {
+                        Some(path)
+                    } else {
+                        None
+                    }
+                });
+
+                for p in tobe_clean {
+                    debug!("cleaning old: {}", p.display());
+                    std::fs::remove_file(p)
+                        .with_context(|| eyre!("cleaning old renc file error"))?;
                 }
-            });
-
-            for p in tobe_clean {
-                debug!("cleaning old: {}", p.display());
-                std::fs::remove_file(p).with_context(|| eyre!("cleaning old renc file error"))?;
-            }
-            Ok(())
-        })
+                Ok(())
+            })
     }
 
     /// retain non exist path
     pub fn retain_noexist(&mut self) {
-        self.inner_ref_mut().retain(|_, v| !v.path.exists())
+        self.inner_ref_mut().pin().retain(|_, v| !v.path.exists())
     }
 
     pub fn makeup(&self, ctx: &RencCtx<'a, AgeEnc>, ident: &dyn Identity) -> Result<()> {
         self.inner_ref()
+            .pin()
             .iter()
             .try_for_each(|((s, host), sec_path)| {
                 use std::io::Write;
 
                 debug!("rencrypt [{}]", sec_path.path.display());
-                let buf = ctx
-                    .inner_ref()
-                    .get(s)
-                    .with_context(|| eyre!("encrypted buf not found"))?;
-
                 let host_ssh_recip: Box<dyn Recipient> =
                     RawRecip::from(String::from_str(host.recip())?).try_into()?;
 
@@ -311,7 +329,11 @@ impl<'a> RencInst<'a, InRepo> {
 
                 target_file
                     .write_all(
-                        buf.renc(ident, iter::once(host_ssh_recip.as_ref()))?
+                        ctx.inner_ref()
+                            .pin()
+                            .get(s)
+                            .with_context(|| eyre!("encrypted buf not found"))?
+                            .renc(ident, iter::once(host_ssh_recip.as_ref()))?
                             .buf_ref(),
                     )
                     .with_context(|| eyre!("write renc file error"))
@@ -327,9 +349,9 @@ impl<'a> FromIterator<((&'a profile::Secret, HostInfo<'a>), SecPathBuf<InRepo>)>
     >(
         iter: T,
     ) -> Self {
-        let mut m = HashMap::new();
+        let m = HashMap::new();
         for i in iter.into_iter() {
-            m.insert(i.0, i.1);
+            m.pin().insert(i.0, i.1);
         }
         Self(m)
     }
@@ -359,9 +381,9 @@ impl<'a> From<HashMap<(&'a Secret, HostInfo<'a>), SecPathBuf<InStore>>> for Renc
 }
 impl<'a> FromIterator<(&'a profile::Secret, SecBuf<AgeEnc>)> for RencCtx<'a, AgeEnc> {
     fn from_iter<T: IntoIterator<Item = (&'a profile::Secret, SecBuf<AgeEnc>)>>(iter: T) -> Self {
-        let mut m = HashMap::new();
+        let m = HashMap::new();
         for i in iter.into_iter() {
-            m.insert(i.0, i.1);
+            m.pin().insert(i.0, i.1);
         }
         Self(m)
     }
