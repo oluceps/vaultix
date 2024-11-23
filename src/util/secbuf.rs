@@ -2,6 +2,7 @@ use std::fs::{OpenOptions, Permissions};
 use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
+use std::sync::{Arc, RwLock};
 use std::{io::Read, iter, marker::PhantomData};
 
 use age::{Identity, Recipient};
@@ -42,12 +43,17 @@ impl<T> SecBuf<T> {
     pub fn buf_ref(&self) -> &Vec<u8> {
         self.buf.as_ref()
     }
-    pub fn decrypt(&self, ident: &dyn Identity) -> Result<SecBuf<Plain>> {
+    pub fn decrypt(
+        &self,
+        ident: Arc<RwLock<Box<dyn Identity + Send + Sync>>>,
+    ) -> Result<SecBuf<Plain>> {
         let buffer = self.buf_ref();
         let decryptor = age::Decryptor::new(&buffer[..])?;
+        let id_guard = ident.read().expect("read");
+        let id_ref: &dyn Identity = id_guard.as_ref();
 
         let mut dec_content = vec![];
-        let mut reader = decryptor.decrypt(iter::once(ident))?;
+        let mut reader = decryptor.decrypt(iter::once(id_ref))?;
         let res = reader.read_to_end(&mut dec_content);
         if let Ok(b) = res {
             debug!("decrypted secret {} bytes", b);
@@ -68,7 +74,7 @@ impl<T> From<Vec<u8>> for SecBuf<T> {
 impl SecBuf<AgeEnc> {
     pub fn renc<'a>(
         &self,
-        ident: &dyn Identity,
+        ident: Arc<RwLock<Box<dyn Identity + Send + Sync>>>,
         recips: impl Iterator<Item = &'a dyn Recipient>,
     ) -> Result<SecBuf<HostEnc>> {
         self.decrypt(ident).and_then(|d| d.encrypt(recips))
@@ -156,6 +162,10 @@ mod tests {
         let new_recip_str = "age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs3290gq";
         let buf = SecBuf::<AgeEnc>::new(encrypted);
         let r = &age::x25519::Recipient::from_str(new_recip_str).unwrap() as &dyn Recipient;
-        let _ = buf.renc(&key as &dyn Identity, iter::once(r)).unwrap();
+
+        let boxed_key: Box<dyn Identity + Send + Sync> = Box::new(key);
+        let key = Arc::new(RwLock::new(boxed_key));
+
+        let _ = buf.renc(key, iter::once(r)).unwrap();
     }
 }

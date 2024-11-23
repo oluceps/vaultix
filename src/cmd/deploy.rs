@@ -16,7 +16,7 @@ use crate::{
 };
 
 use crate::parser::recipient::RawRecip;
-use age::Recipient;
+use age::{Identity, Recipient};
 use eyre::{eyre, Context, ContextCompat, Result};
 use hex::decode;
 use lib::extract_all_hashes;
@@ -147,7 +147,7 @@ impl Profile {
             info!("nothing needs to deploy before userborn. finish");
             return Ok(());
         }
-        let host_prv_key = &self.get_host_key_identity()?;
+        let host_prv_key: Box<dyn Identity> = Box::new(self.get_host_key_identity()?);
 
         let if_early = |i: &String| -> bool { self.before_userborn.contains(i) == early };
 

@@ -3,6 +3,7 @@ use std::{
     io::Write,
     iter,
     path::PathBuf,
+    sync::{Arc, RwLock},
 };
 
 use crate::util::{
@@ -49,7 +50,7 @@ pub fn edit(arg: EditSubCmd) -> eyre::Result<()> {
         let buf = SecPath::<String, InRepo>::new(file.clone())
             .read_buffer()
             .map(SecBuf::<AgeEnc>::from)?
-            .decrypt(id_parsed.identity.as_ref())?
+            .decrypt(Arc::new(RwLock::new(id_parsed.identity)))?
             .inner();
         let pre_hash = blake3::hash(buf.as_slice());
 

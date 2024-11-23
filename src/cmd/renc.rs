@@ -4,7 +4,6 @@ use crate::{
     profile::Profile,
     util::secmap::{RencBuilder, RencCtx},
 };
-use age::Identity;
 use eyre::{eyre, Result};
 use log::{error, info};
 use std::{fs, path::PathBuf};
@@ -66,9 +65,7 @@ impl<'a> CompleteProfile<'a> {
             recipient: _,
         } = RawIdentity::from(identity).try_into()?;
 
-        let id = identity.as_ref() as &dyn Identity;
-
-        instance.makeup(&ctx, id)?;
+        instance.makeup(&ctx, identity)?;
 
         info!("finish");
 

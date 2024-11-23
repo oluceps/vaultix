@@ -5,7 +5,7 @@ use std::{
     iter,
     path::{Path, PathBuf},
     str::FromStr,
-    sync::Arc,
+    sync::{Arc, Mutex, RwLock},
 };
 
 use crate::{
@@ -245,20 +245,28 @@ impl<'a> RencInst<'a, InStore> {
             .into()
     }
     /// read secret file
-    pub fn bake_decrypted(self, ident: &dyn Identity) -> Result<Arc<HashMap<&'a Secret, Vec<u8>>>> {
+    pub fn bake_decrypted(
+        self,
+        ident: Box<dyn Identity + Send + Sync>,
+    ) -> Result<Arc<HashMap<&'a Secret, Vec<u8>>>> {
         let self_arc = Arc::new(self.inner());
         let self_arc_ref = self_arc.pin();
         let ret: Arc<HashMap<&Secret, Vec<u8>>> = Arc::new(HashMap::new());
+        let id = Arc::new(RwLock::new(ident));
 
-        for ((k, _), v) in self_arc_ref.into_iter() {
-            ret.pin().insert(
-                k,
-                v.read_buffer()
-                    .and_then(|i| SecBuf::<HostEnc>::from(i).decrypt(ident))
-                    .expect("decrypt must sussess")
-                    .inner(),
-            );
-        }
+        std::thread::scope(|s| {
+            for ((k, _), v) in self_arc_ref.into_iter() {
+                s.spawn(move || {
+                    ret.pin().insert(
+                        k,
+                        v.read_buffer()
+                            .and_then(|i| SecBuf::<HostEnc>::from(i).decrypt(id))
+                            .expect("decrypt must sussess")
+                            .inner(),
+                    );
+                });
+            }
+        });
         Ok(ret)
     }
 }
@@ -309,7 +317,12 @@ impl<'a> RencInst<'a, InRepo> {
         self.inner_ref_mut().pin().retain(|_, v| !v.path.exists())
     }
 
-    pub fn makeup(&self, ctx: &RencCtx<'a, AgeEnc>, ident: &dyn Identity) -> Result<()> {
+    pub fn makeup(
+        &self,
+        ctx: &RencCtx<'a, AgeEnc>,
+        ident: Box<dyn Identity + Send + Sync>,
+    ) -> Result<()> {
+        let key = Arc::new(RwLock::new(ident));
         self.inner_ref()
             .pin()
             .iter()
@@ -333,7 +346,7 @@ impl<'a> RencInst<'a, InRepo> {
                             .pin()
                             .get(s)
                             .with_context(|| eyre!("encrypted buf not found"))?
-                            .renc(ident, iter::once(host_ssh_recip.as_ref()))?
+                            .renc(key.clone(), iter::once(host_ssh_recip.as_ref()))?
                             .buf_ref(),
                     )
                     .with_context(|| eyre!("write renc file error"))
