@@ -187,12 +187,13 @@ impl<'a> RencBuilder<'a> {
         cache_dir: PathBuf,
     ) -> RencInst<'a, InRepo> {
         RencInst::<'_, InRepo>(
-            self.0
-                .pin()
-                .iter()
-                .fold(HashMap::new(), |acc, ((x, _), z)| {
+            self.0.pin().iter().fold(
+                HashMap::builder()
+                    .resize_mode(papaya::ResizeMode::Blocking)
+                    .build(),
+                |acc, ((x, _), z)| {
                     z.iter().for_each(|h| {
-                        let hash = ctx.0.pin().get(x).expect("").hash_with(h.recip());
+                        let hash = ctx.0.pin().get(x).expect("never").hash_with(h.recip());
                         let in_repo = {
                             let mut p: PathBuf = cache_dir.clone();
                             p.push(h.0);
@@ -202,7 +203,8 @@ impl<'a> RencBuilder<'a> {
                         acc.pin().insert((*x, h.clone()), in_repo);
                     });
                     acc
-                }),
+                },
+            ),
         )
     }
 
