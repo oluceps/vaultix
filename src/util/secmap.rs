@@ -309,14 +309,14 @@ impl<'a> RencData<'a, InRepo> {
 }
 impl<'a> RencInstance<'a> {
     pub fn makeup(
-        &self,
+        self,
         ctx: &RencCtx<'a, AgeEnc>,
         ident: Box<dyn Identity>,
         // host_recips: HashMap<&str, Box<dyn Recipient + Send>>,
     ) -> Result<()> {
         let key: Rc<dyn Identity> = Rc::from(ident);
 
-        let material = &self.0.clone().into_read_only();
+        let material = &self.0.into_read_only();
 
         info!("start decrypt");
 
@@ -344,7 +344,7 @@ impl<'a> RencInstance<'a> {
         let res: Arc<Mutex<Vec<eyre::Result<()>>>> = Arc::new(Mutex::new(Vec::new()));
 
         std::thread::scope(|s| {
-            for (h, v) in material.iter() {
+            material.iter().for_each(|(h, v)| {
                 trace!("got host age recipient");
                 debug!("rencrypting for [{}]", h.id());
                 let res = res.clone();
@@ -412,7 +412,7 @@ impl<'a> RencInstance<'a> {
                         };
                     }
                 });
-            }
+            });
         });
 
         sp.stop_with_newline();

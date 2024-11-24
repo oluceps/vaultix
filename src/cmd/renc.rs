@@ -66,7 +66,7 @@ impl<'a> CompleteProfile<'a> {
 
         raw_instance
             .all_host_cache_in_repo(cache_path)
-            .into_iter()
+            .iter()
             .try_for_each(|i| {
                 info!("adding cache to store: {}", i.display());
                 let o = add_to_store(i)?;
