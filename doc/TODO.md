@@ -1,9 +1,8 @@
-- [ ] i18n
-- [ ] parallel encryption & decryption
-- [ ] multilingual docs
+- [ ] i18n & multilingual docs
 - [ ] restart/reload sd unit control (after systemd varlink api)
+- [x] parallel encryption & ~~decryption~~ (age identity not `Send`)
 - [x] reduce duplicated reads
-- [x] secrets for users
+- [x] secrets for users (pre-userborn extraction)
 - [x] optimize template placeholder map get
 - [x] test with os
 - [x] deploy to specified location

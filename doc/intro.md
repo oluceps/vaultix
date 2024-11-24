@@ -6,6 +6,7 @@
 This project is highly inspired by [agenix-rekey](https://github.com/oddlama/agenix-rekey) and [sops-nix](https://github.com/Mic92/sops-nix).
 
 + Based on age rust [implemention](https://docs.rs/age/latest/age)
++ Parallel encryption at host granularity
 + Support secure identity with passphrase
 + Support template for reusing insensitive stanza
 + Support Yubikey PIV with [age-yubikey-plugin](https://github.com/str4d/age-plugin-yubikey)
