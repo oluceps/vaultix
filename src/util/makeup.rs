@@ -1,4 +1,5 @@
 use std::{
+    collections::HashSet,
     iter,
     rc::Rc,
     str::FromStr,
@@ -12,6 +13,7 @@ use nom::AsBytes;
 
 use crate::{
     parser::recipient::RawRecip,
+    profile,
     util::{
         secbuf::{Plain, SecBuf},
         secmap::{InRepo, SecPathBuf},
@@ -28,38 +30,66 @@ use eyre::{eyre, Context, ContextCompat, Result};
 impl<'a> RencInstance<'a> {
     pub fn makeup(
         self,
-        ctx: &RencCtx<'a, AgeEnc>,
+        ctx_agenc: &RencCtx<'a, AgeEnc>,
         ident: Box<dyn Identity>,
-    ) -> Result<Vec<String>> {
+    ) -> Result<HashSet<String>> {
         let key: Rc<dyn Identity> = Rc::from(ident);
 
         let material = &self.inner().into_read_only();
 
-        info!("decrypting...");
-
-        let the_map: Arc<DashMap<&SecPathBuf<InRepo>, SecBuf<Plain>>> = Arc::new(
-            material
-                .values()
-                .flatten()
-                .map(|(k, v)| {
-                    ctx.inner_ref()
-                        .get(k)
-                        .wrap_err_with(|| eyre!("encrypted buf not found"))
-                        .and_then(|buf_agenc| buf_agenc.decrypt(key.clone().as_ref()))
-                        .map(|b| (v, b))
-                })
-                .try_collect()?,
-        );
+        info!("re-ecrypting...");
 
         use std::io::Write;
 
         let res: Arc<Mutex<Vec<eyre::Result<&str>>>> = Arc::new(Mutex::new(Vec::new()));
 
+        debug!(
+            "total {} host(s) need to re-encrypt",
+            material.keys().count()
+        );
         std::thread::scope(|s| {
             material.iter().for_each(|(h, v)| {
+                let key = key.clone();
+
+                let sec_plain_map: Arc<DashMap<&profile::Secret, SecBuf<Plain>>> =
+                    Arc::new(DashMap::new());
+
+                let path_sec_map: Arc<DashMap<&SecPathBuf<InRepo>, &profile::Secret>> = Arc::new(
+                    match material
+                        .get(h)
+                        .wrap_err_with(|| eyre!("never"))
+                        .and_then(|m| {
+                            m.iter()
+                                .map(|(k, v)| {
+                                    if sec_plain_map.contains_key(k) {
+                                        return Ok((v, *k));
+                                    }
+
+                                    if let Ok(o) = ctx_agenc
+                                        .inner_ref()
+                                        .get(k)
+                                        .wrap_err_with(|| eyre!("encrypted buf not found"))
+                                    {
+                                        sec_plain_map.insert(*k, o.decrypt(key.as_ref()).unwrap());
+                                    }
+                                    Ok((v, *k))
+                                })
+                                .try_collect()
+                        }) {
+                        Ok(o) => o,
+                        e @ Err(_) => {
+                            res.lock()
+                                .expect("doesn't matter now")
+                                .push(e.map(|_| h.id()));
+                            return;
+                        }
+                    },
+                );
+
                 debug!("rencrypting for [{}]", h.id());
                 let res = res.clone();
-                let dst_ctt_map = the_map.clone();
+                let dst_ctt_map = path_sec_map.clone();
+                let sec_plain_map = sec_plain_map.clone();
 
                 let recip: Box<dyn Recipient + Send> = if let Ok(Ok(o)) =
                     String::from_str(h.recip())
@@ -106,7 +136,10 @@ impl<'a> RencInstance<'a> {
 
                         let dst_ctt_map_ref = dst_ctt_map.clone();
 
-                        let buf = dst_ctt_map_ref.get(inrepo_path).expect("should have");
+                        let buf = dst_ctt_map_ref
+                            .get(inrepo_path)
+                            .and_then(|s| sec_plain_map.get(*s))
+                            .expect("must have");
 
                         let ctt = match buf.clone().encrypt(iter::once(recip.as_ref())) {
                             Ok(o) => o,
@@ -131,7 +164,7 @@ impl<'a> RencInstance<'a> {
 
         info!("finished");
 
-        let last_res = res.lock().expect("");
+        let last_res = res.lock().expect("never");
 
         last_res.iter().for_each(|i| {
             if let Err(e) = i {

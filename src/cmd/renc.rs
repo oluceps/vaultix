@@ -73,7 +73,8 @@ impl<'a> CompleteProfile<'a> {
                     root.push(cache_path.clone());
                     root.push(i);
                     root
-                };
+                }
+                .canonicalize()?;
                 info!("storing cache: {}", host_cache.display());
                 let o = add_to_store(host_cache)?;
                 if !o.status.success() {
