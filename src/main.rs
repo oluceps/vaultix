@@ -6,6 +6,7 @@ use simple_logger::SimpleLogger;
 mod cmd;
 mod util {
     pub mod callback;
+    pub mod makeup;
     pub mod secbuf;
     pub mod secmap;
     pub mod set_owner_group;

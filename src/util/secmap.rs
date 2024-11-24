@@ -3,29 +3,22 @@ use std::{
     fmt,
     fs::File,
     io::{self, Read},
-    iter,
     path::{Path, PathBuf},
-    rc::Rc,
-    str::FromStr,
-    sync::{Arc, Mutex},
 };
 
 use crate::{
     cmd::renc::CompleteProfile,
-    parser::recipient::RawRecip,
     profile::{self, Secret},
     util::secbuf::AgeEnc,
 };
-use age::{Identity, Recipient};
+use age::Identity;
 use dashmap::{DashMap, Map};
+use eyre::Context;
 use eyre::{eyre, Result};
-use eyre::{Context, ContextCompat};
-use log::{debug, error, info, trace};
-use nom::AsBytes;
-use spinners::{Spinner, Spinners};
+use log::debug;
 use std::marker::PhantomData;
 
-use super::secbuf::{HostEnc, Plain, SecBuf};
+use super::secbuf::{HostEnc, SecBuf};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct SecPath<P: AsRef<Path>, T> {
@@ -38,7 +31,7 @@ pub struct InStore;
 #[derive(Eq, Hash, PartialEq, Debug, Clone)]
 pub struct InRepo;
 
-type SecPathBuf<A> = SecPath<PathBuf, A>;
+pub type SecPathBuf<A> = SecPath<PathBuf, A>;
 
 pub trait GetSec {
     fn read_buffer(&self) -> Result<Vec<u8>>;
@@ -95,6 +88,12 @@ pub struct RencData<'a, W>(std::collections::HashMap<(&'a Secret, HostInfo<'a>),
 #[derive(Debug, Clone)]
 pub struct RencInstance<'a>(dashmap::DashMap<HostInfo<'a>, Vec<(&'a Secret, SecPathBuf<InRepo>)>>);
 
+impl<'a> RencInstance<'a> {
+    pub fn inner(self) -> dashmap::DashMap<HostInfo<'a>, Vec<(&'a Secret, SecPathBuf<InRepo>)>> {
+        self.0
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct RencCtx<'a, B>(DashMap<&'a Secret, SecBuf<B>>);
 
@@ -141,18 +140,6 @@ impl<'a, W> RencData<'a, W> {
             }
         }
         false
-    }
-    pub fn all_host_cache_in_repo(&self, cache_dir: PathBuf) -> Vec<PathBuf> {
-        let mut ret = Vec::new();
-
-        self.inner_ref().iter().for_each(|((_, y), _)| {
-            let mut c = cache_dir.clone();
-            c.push(y.id());
-            if !ret.contains(&c) {
-                ret.push(c);
-            }
-        });
-        ret
     }
 }
 impl<'a> RencBuilder<'a> {
@@ -305,125 +292,6 @@ impl<'a> RencData<'a, InRepo> {
                     acc
                 }),
         )
-    }
-}
-impl<'a> RencInstance<'a> {
-    pub fn makeup(
-        self,
-        ctx: &RencCtx<'a, AgeEnc>,
-        ident: Box<dyn Identity>,
-        // host_recips: HashMap<&str, Box<dyn Recipient + Send>>,
-    ) -> Result<()> {
-        let key: Rc<dyn Identity> = Rc::from(ident);
-
-        let material = &self.0.into_read_only();
-
-        info!("start decrypt");
-
-        let the_map: Arc<DashMap<&SecPathBuf<InRepo>, SecBuf<Plain>>> = Arc::new(
-            material
-                .values()
-                .flatten()
-                .map(|(k, v)| {
-                    ctx.inner_ref()
-                        .get(k)
-                        .wrap_err_with(|| eyre!("encrypted buf not found"))
-                        .and_then(|buf_agenc| buf_agenc.decrypt(key.clone().as_ref()))
-                        .map(|b| (v, b))
-                })
-                .try_collect()?,
-        );
-
-        use std::io::Write;
-
-        let mut sp = Spinner::new(
-            Spinners::from_str("SquareCorners")?,
-            "re-encrypting...".into(),
-        );
-
-        let res: Arc<Mutex<Vec<eyre::Result<()>>>> = Arc::new(Mutex::new(Vec::new()));
-
-        std::thread::scope(|s| {
-            material.iter().for_each(|(h, v)| {
-                trace!("got host age recipient");
-                debug!("rencrypting for [{}]", h.id());
-                let res = res.clone();
-                let dst_ctt_map = the_map.clone();
-
-                let recip: Box<dyn Recipient + Send> = if let Ok(Ok(o)) =
-                    String::from_str(h.recip())
-                        .map(RawRecip::from)
-                        .map(RawRecip::try_into)
-                {
-                    o
-                } else {
-                    res.lock()
-                        .expect("doesn't matter now")
-                        .push(Err(eyre!("parse host recipient fail")));
-                    return;
-                };
-
-                s.spawn(move || {
-                    for (_, inrepo_path) in v.iter() {
-                        if let Err(e) = inrepo_path
-                            .path
-                            .parent()
-                            .wrap_err_with(|| {
-                                eyre!("cache file path has no parent, is this possible?")
-                            })
-                            .and_then(|i| {
-                                std::fs::create_dir_all(i)
-                                    .wrap_err_with(|| eyre!("create host cache dir in repo failed"))
-                            })
-                        {
-                            res.lock().expect("doesn't matter now").push(Err(e));
-                            return;
-                        };
-                        let mut target_file = if let Ok(o) = std::fs::OpenOptions::new()
-                            .write(true)
-                            .create(true)
-                            .truncate(true)
-                            .open(inrepo_path.path.clone())
-                        {
-                            o
-                        } else {
-                            res.lock()
-                                .expect("doesn't matter now")
-                                .push(Err(eyre!("create file error")));
-                            return;
-                        };
-
-                        let dst_ctt_map_ref = dst_ctt_map.clone();
-
-                        let buf = dst_ctt_map_ref.get(inrepo_path).expect("should have");
-
-                        let ctt = match buf.clone().encrypt(iter::once(recip.as_ref())) {
-                            Ok(o) => o,
-                            e @ Err(_) => {
-                                res.lock().expect("doesn't matter now").push(e.map(|_| ()));
-                                return;
-                            }
-                        };
-
-                        if target_file.write_all(ctt.inner().as_bytes()).is_err() {
-                            res.lock()
-                                .expect("doesn't matter now")
-                                .push(Err(eyre!("write cache file failed")))
-                        };
-                    }
-                });
-            });
-        });
-
-        sp.stop_with_newline();
-        info!("finished");
-
-        res.lock().expect("whatever").iter().for_each(|i| {
-            if let Err(e) = i {
-                error!("{}", e);
-            }
-        });
-        Ok(())
     }
 }
 

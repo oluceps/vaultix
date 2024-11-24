@@ -62,14 +62,20 @@ impl<'a> CompleteProfile<'a> {
         } = RawIdentity::from(identity).try_into()?;
 
         let ctx = RencCtx::create(&self);
-        raw_instance.build_instance().makeup(&ctx, identity)?;
 
         raw_instance
-            .all_host_cache_in_repo(cache_path)
+            .build_instance()
+            .makeup(&ctx, identity)?
             .iter()
             .try_for_each(|i| {
-                info!("adding cache to store: {}", i.display());
-                let o = add_to_store(i)?;
+                let host_cache = {
+                    let mut root = flake_root.clone();
+                    root.push(cache_path.clone());
+                    root.push(i);
+                    root
+                };
+                info!("storing cache: {}", host_cache.display());
+                let o = add_to_store(host_cache)?;
                 if !o.status.success() {
                     error!("Command executed with failing error code");
                     // Another side, calculate with nix `builtins.path` and pass to when deploy as `storage`
