@@ -13,16 +13,16 @@ impl From<String> for RawRecip {
     }
 }
 
-impl TryInto<Box<dyn Recipient>> for RawRecip {
+impl TryInto<Box<dyn Recipient + Send>> for RawRecip {
     type Error = eyre::ErrReport;
-    fn try_into(self) -> Result<Box<dyn Recipient>, Self::Error> {
+    fn try_into(self) -> Result<Box<dyn Recipient + Send>, Self::Error> {
         use std::str::FromStr;
         let recip_str = self.0.as_str();
         macro_rules! try_recipients {
             ($pub_str:expr, $($type:path),+) => {
                 $(
                     if let Ok(o) = <$type>::from_str($pub_str) {
-                        return Ok(Box::new(o) as Box<dyn Recipient>);
+                        return Ok(Box::new(o) as Box<dyn Recipient + Send>);
                     }
                 )+
             };

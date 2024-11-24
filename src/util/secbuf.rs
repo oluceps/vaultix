@@ -66,10 +66,11 @@ impl<T> From<Vec<u8>> for SecBuf<T> {
 }
 
 impl SecBuf<AgeEnc> {
+    #[cfg(test)]
     pub fn renc<'a>(
         &self,
         ident: &dyn Identity,
-        recips: impl Iterator<Item = &'a dyn Recipient>,
+        recips: impl Iterator<Item = &'a (dyn Recipient + Send)>,
     ) -> Result<SecBuf<HostEnc>> {
         self.decrypt(ident).and_then(|d| d.encrypt(recips))
     }
@@ -83,8 +84,9 @@ impl SecBuf<Plain> {
     /// encrypt with host pub key, ssh key
     pub fn encrypt<'a>(
         self,
-        recips: impl Iterator<Item = &'a dyn Recipient>,
+        recips: impl Iterator<Item = &'a (dyn Recipient + Send)>,
     ) -> Result<SecBuf<HostEnc>> {
+        let recips = recips.map(|r| r as &dyn Recipient);
         let encryptor =
             age::Encryptor::with_recipients(recips).map_err(|_| eyre!("create encryptor err"))?;
 
@@ -155,7 +157,11 @@ mod tests {
         // 0x01
         let new_recip_str = "age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs3290gq";
         let buf = SecBuf::<AgeEnc>::new(encrypted);
-        let r = &age::x25519::Recipient::from_str(new_recip_str).unwrap() as &dyn Recipient;
-        let _ = buf.renc(&key as &dyn Identity, iter::once(r)).unwrap();
+        let r =
+            &age::x25519::Recipient::from_str(new_recip_str).unwrap() as &(dyn Recipient + Send);
+
+        let boxed_key: Box<dyn Identity> = Box::new(key);
+
+        let _ = buf.renc(boxed_key.as_ref(), iter::once(r)).unwrap();
     }
 }

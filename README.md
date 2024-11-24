@@ -1,4 +1,3 @@
-
 # Vaultix
 
 [![nixos infra](https://img.shields.io/badge/NixOS%20infra-3A8FB7?style=for-the-badge&logo=nixos&logoColor=BBDDE5)](https://nixos.wiki/wiki/Comparison_of_secret_managing_schemes)
@@ -11,6 +10,7 @@ Secret managing scheme for NixOS
 Highly inspired by [agenix-rekey](https://github.com/oddlama/agenix-rekey) and [sops-nix](https://github.com/Mic92/sops-nix).
 
 + Based on age rust [implemention](https://docs.rs/age/latest/age)
++ Parallel encryption at host granularity
 + Support secure identity with passphrase
 + Support template for reusing insensitive stanza
 + Support Yubikey PIV with [age-yubikey-plugin](https://github.com/str4d/age-plugin-yubikey)
@@ -21,7 +21,3 @@ Highly inspired by [agenix-rekey](https://github.com/oddlama/agenix-rekey) and [
 ## Setup
 
 See [docs](https://oluceps.github.io/vaultix/)
-
-## TODO
-
-See [todo](./TODO.md)
