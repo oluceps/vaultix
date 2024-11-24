@@ -1,6 +1,7 @@
 use std::{
     collections::HashSet,
     iter,
+    path::PathBuf,
     rc::Rc,
     str::FromStr,
     sync::{Arc, Mutex},
@@ -32,7 +33,7 @@ impl<'a> RencInstance<'a> {
         self,
         ctx_agenc: &RencCtx<'a, AgeEnc>,
         ident: Box<dyn Identity>,
-    ) -> Result<HashSet<String>> {
+    ) -> Result<HashSet<PathBuf>> {
         let key: Rc<dyn Identity> = Rc::from(ident);
 
         let material = &self.inner().into_read_only();
@@ -41,7 +42,7 @@ impl<'a> RencInstance<'a> {
 
         use std::io::Write;
 
-        let res: Arc<Mutex<Vec<eyre::Result<&str>>>> = Arc::new(Mutex::new(Vec::new()));
+        let res: Arc<Mutex<Vec<eyre::Result<PathBuf>>>> = Arc::new(Mutex::new(Vec::new()));
 
         debug!(
             "total {} host(s) need to re-encrypt",
@@ -80,7 +81,7 @@ impl<'a> RencInstance<'a> {
                         e @ Err(_) => {
                             res.lock()
                                 .expect("doesn't matter now")
-                                .push(e.map(|_| h.id()));
+                                .push(e.map(|_| PathBuf::default()));
                             return;
                         }
                     },
@@ -146,7 +147,7 @@ impl<'a> RencInstance<'a> {
                             e @ Err(_) => {
                                 res.lock()
                                     .expect("doesn't matter now")
-                                    .push(e.map(|_| h.id()));
+                                    .push(e.map(|_| PathBuf::default()));
                                 return;
                             }
                         };
@@ -156,7 +157,9 @@ impl<'a> RencInstance<'a> {
                                 .expect("doesn't matter now")
                                 .push(Err(eyre!("write cache file failed")))
                         };
-                        res.lock().expect("thread work end").push(Ok(h.id()));
+                        res.lock()
+                            .expect("thread work end")
+                            .push(Ok(inrepo_path.path.clone()));
                     }
                 });
             });
@@ -177,7 +180,7 @@ impl<'a> RencInstance<'a> {
             .filter(|i| i.is_ok())
             .map(|i| {
                 if let Ok(o) = i {
-                    String::from(*o)
+                    o.clone()
                 } else {
                     unreachable!()
                 }

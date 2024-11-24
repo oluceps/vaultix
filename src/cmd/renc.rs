@@ -67,16 +67,10 @@ impl<'a> CompleteProfile<'a> {
             .build_instance()
             .makeup(&ctx, identity)?
             .iter()
-            .try_for_each(|i| {
-                let host_cache = {
-                    let mut root = flake_root.clone();
-                    root.push(cache_path.clone());
-                    root.push(i);
-                    root
-                }
-                .canonicalize()?;
-                info!("storing cache: {}", host_cache.display());
-                let o = add_to_store(host_cache)?;
+            .try_for_each(|p| {
+                let cache = p.canonicalize()?;
+                info!("storing cache: {}", cache.display());
+                let o = add_to_store(cache)?;
                 if !o.status.success() {
                     error!("Command executed with failing error code");
                     // Another side, calculate with nix `builtins.path` and pass to when deploy as `storage`
