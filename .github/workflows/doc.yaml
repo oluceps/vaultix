@@ -2,7 +2,7 @@ name: Docs
 
 on:
   push:
-    branches: ["main"]
+    branches: ["*"]
   workflow_dispatch:
 
 permissions:
@@ -16,6 +16,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.ref == 'refs/heads/main'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -42,3 +43,21 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+  build:
+    if: github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: 'myrrhlab/vaultix-mdbook-custom'
+          path: './theme'
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Install mdBook
+        run: |
+          cargo install mdbook --no-default-features --features search --vers "^0.4" --locked
+      - name: Build mdBook
+        run: |
+          mdbook build
