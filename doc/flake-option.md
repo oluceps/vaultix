@@ -42,6 +42,17 @@ This is THE identity that could decrypt all of your secret, take care of it.
 
 > Every `path` in your nix configuration will load file to nix store, eventually shows as string of absolute path to nix store.
 
+example:
+
+```
+"/where/age-yubikey-identity-7d5d5540.txt.pub"
+./age-yubikey-identity-7d5d5540.txt.pub
+"/where/agekey"
+./agekey # WARNING: this recommmend protected with passphrase
+```
+
+The [Yubikey PIV](https://developers.yubico.com/yubico-piv-tool/YubiKey_PIV_introduction.html) identity with plugin provided better security, but the decryption speed (at re-encryption and edit stage) will depend on your yubikey device.
+
 Since it inherited great compatibility of `age`, you could use [yubikey](https://github.com/str4d/age-plugin-yubikey). Feel free to test other plugins like [age tpm](https://github.com/Foxboron/age-plugin-tpm). 
 
 
