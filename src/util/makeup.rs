@@ -70,8 +70,9 @@ impl<'a> RencInstance<'a> {
                                         .inner_ref()
                                         .get(k)
                                         .wrap_err_with(|| eyre!("encrypted buf not found"))
+                                        .and_then(|pl| pl.decrypt(key.as_ref()))
                                     {
-                                        sec_plain_map.insert(*k, o.decrypt(key.as_ref()).unwrap());
+                                        sec_plain_map.insert(*k, o);
                                     }
                                     Ok((v, *k))
                                 })
