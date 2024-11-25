@@ -1,7 +1,9 @@
+cargo-features = ["edition2024"]
+
 [package]
 name = "vaultix"
-version = "0.1.0"
-edition = "2021"
+version = "0.1.4"
+edition = "2024"
 
 [lib]
 name = "lib"
