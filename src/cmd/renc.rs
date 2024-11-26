@@ -4,7 +4,7 @@ use crate::{
     profile::Profile,
     util::secmap::{RencBuilder, RencCtx},
 };
-use eyre::{eyre, Result};
+use eyre::{Result, bail};
 use log::{error, info};
 use std::{fs, path::PathBuf};
 
@@ -46,9 +46,7 @@ impl<'a> CompleteProfile<'a> {
             })
         }) {
             error!("please run app in flake root");
-            return Err(eyre!(
-                "`flake.nix` not found here, make sure run in flake toplevel."
-            ));
+            bail!("`flake.nix` not found here, make sure run in flake toplevel.");
         };
 
         let ctx = RencCtx::create(&self);
@@ -75,7 +73,7 @@ impl<'a> CompleteProfile<'a> {
                     error!("Command executed with failing error code");
                     // Another side, calculate with nix `builtins.path` and pass to when deploy as `storage`
                     info!("path added to store: {}", String::from_utf8(o.stdout)?);
-                    return Err(eyre!("unexpected error"));
+                    bail!("unexpected error");
                 }
                 Ok(())
             })

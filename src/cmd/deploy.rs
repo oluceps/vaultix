@@ -17,7 +17,7 @@ use crate::{
 
 use crate::parser::recipient::RawRecip;
 use age::{Identity, Recipient};
-use eyre::{eyre, Context, ContextCompat, Result};
+use eyre::{Context, ContextCompat, Result, eyre};
 use hex::decode;
 use lib::extract_all_hashes;
 use log::{debug, error, info};
@@ -90,7 +90,7 @@ impl Profile {
                     let err =
                         "ramfs not supported! Refusing extract secret since it will write to disk";
                     error!("{}", err);
-                    return Err(eyre!(err));
+                    eyre::bail!(err);
                 }
                 let path = self.decrypted_mount_point();
                 info!("creating mount point {}", path);

@@ -1,4 +1,4 @@
-use eyre::{eyre, Result};
+use eyre::{Result, eyre};
 use libc::{fchown, getgrnam, getpwnam};
 use log::warn;
 use std::{ffi::CString, fs::File, os::fd::AsRawFd};
@@ -17,7 +17,7 @@ pub fn set_owner_and_group(file: &File, owner: &str, group: &str) -> Result<()> 
     let result = unsafe { fchown(fd, user_uid, group_gid) };
 
     if result == -1 {
-        return Err(eyre::eyre!("set permission failed"));
+        eyre::bail!("set permission failed");
     }
     Ok(())
 }
@@ -28,7 +28,7 @@ fn get_uid_from_username(username: &str) -> Result<u32> {
     unsafe {
         let pw = getpwnam(c_username.as_ptr());
         if pw.is_null() {
-            return Err(eyre!("User '{}' not found", username));
+            eyre::bail!("User '{}' not found", username);
         }
         Ok((*pw).pw_uid)
     }
@@ -41,7 +41,7 @@ fn get_gid_from_groupname(groupname: &str) -> Result<u32> {
     unsafe {
         let gr = getgrnam(c_groupname.as_ptr());
         if gr.is_null() {
-            return Err(eyre!("Group '{}' not found", groupname));
+            eyre::bail!("Group '{}' not found", groupname);
         }
         Ok((*gr).gr_gid)
     }

@@ -1,4 +1,4 @@
-use eyre::{eyre, Context, ContextCompat, Result};
+use eyre::{Context, ContextCompat, Result, eyre};
 use log::debug;
 
 use crate::util::secmap::{RencBuilder, RencCtx};
