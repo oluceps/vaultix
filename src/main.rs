@@ -11,7 +11,6 @@ mod util {
     pub mod secmap;
     pub mod set_owner_group;
 }
-mod interop;
 mod parser;
 mod profile;
 

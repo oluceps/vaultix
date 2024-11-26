@@ -1,5 +1,4 @@
 use std::{
-    collections::HashSet,
     iter,
     path::PathBuf,
     rc::Rc,
@@ -26,14 +25,10 @@ use super::{
     secmap::{RencCtx, RencInstance},
 };
 
-use eyre::{eyre, Context, ContextCompat, Result};
+use eyre::{Context, ContextCompat, Result, eyre};
 
 impl<'a> RencInstance<'a> {
-    pub fn makeup(
-        self,
-        ctx_agenc: &RencCtx<'a, AgeEnc>,
-        ident: Box<dyn Identity>,
-    ) -> Result<HashSet<PathBuf>> {
+    pub fn makeup(self, ctx_agenc: &RencCtx<'a, AgeEnc>, ident: Box<dyn Identity>) -> Result<()> {
         let key: Rc<dyn Identity> = Rc::from(ident);
 
         let material = &self.inner().into_read_only();
@@ -176,16 +171,6 @@ impl<'a> RencInstance<'a> {
             }
         });
 
-        Ok(last_res
-            .iter()
-            .filter(|i| i.is_ok())
-            .map(|i| {
-                if let Ok(o) = i {
-                    o.clone()
-                } else {
-                    unreachable!()
-                }
-            })
-            .collect())
+        Ok(())
     }
 }

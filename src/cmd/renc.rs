@@ -1,11 +1,10 @@
 use crate::{
-    interop::add_to_store,
     parser::identity::{ParsedIdentity, RawIdentity},
     profile::Profile,
     util::secmap::{RencBuilder, RencCtx},
 };
 use eyre::{Result, bail};
-use log::{error, info};
+use log::error;
 use std::{fs, path::PathBuf};
 
 pub struct CompleteProfile<'a>(pub Vec<&'a Profile>);
@@ -61,21 +60,6 @@ impl<'a> CompleteProfile<'a> {
 
         let ctx = RencCtx::create(&self);
 
-        raw_instance
-            .build_instance()
-            .makeup(&ctx, identity)?
-            .iter()
-            .try_for_each(|p| {
-                let cache = p.canonicalize()?;
-                info!("storing cache: {}", cache.display());
-                let o = add_to_store(cache)?;
-                if !o.status.success() {
-                    error!("Command executed with failing error code");
-                    // Another side, calculate with nix `builtins.path` and pass to when deploy as `storage`
-                    info!("path added to store: {}", String::from_utf8(o.stdout)?);
-                    bail!("unexpected error");
-                }
-                Ok(())
-            })
+        raw_instance.build_instance().makeup(&ctx, identity)
     }
 }
