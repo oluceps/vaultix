@@ -1887,7 +1887,7 @@ dependencies = [
 
 [[package]]
 name = "vaultix"
-version = "0.1.0"
+version = "0.1.4"
 dependencies = [
  "age",
  "argh",
