@@ -14,7 +14,7 @@ use crate::{
 use age::Identity;
 use dashmap::{DashMap, Map};
 use eyre::Context;
-use eyre::{eyre, Result};
+use eyre::{Result, eyre};
 use log::debug;
 use std::marker::PhantomData;
 
@@ -115,6 +115,7 @@ impl<'a> RencCtx<'a, AgeEnc> {
                     SecPathBuf::<InStore>::from(i)
                         .read_buffer()
                         .map(SecBuf::new)
+                        .wrap_err_with(|| eyre!("reading secret file {} failed", i.file))
                         .expect("read store must success"),
                 )
             })
