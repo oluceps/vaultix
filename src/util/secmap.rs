@@ -13,7 +13,7 @@ use crate::{
 };
 use age::Identity;
 use dashmap::{DashMap, Map};
-use eyre::Context;
+use eyre::{Context, bail};
 use eyre::{Result, eyre};
 use log::debug;
 use std::marker::PhantomData;
@@ -104,23 +104,37 @@ impl<'a, B> RencCtx<'a, B> {
 }
 
 impl<'a> RencCtx<'a, AgeEnc> {
-    pub fn create(material: &'a CompleteProfile) -> Self {
-        let c = material
+    pub fn create(material: &'a CompleteProfile) -> Result<Self> {
+        let c: DashMap<&Secret, Result<SecBuf<AgeEnc>>> = material
             .inner_ref()
             .iter()
             .flat_map(|x| x.secrets.values())
             .map(|i| {
                 (
                     i,
-                    SecPathBuf::<InStore>::from(i)
-                        .read_buffer()
-                        .map(SecBuf::new)
-                        .wrap_err_with(|| eyre!("reading secret file {} failed", i.file))
-                        .expect("read store must success"),
+                    PathBuf::from(i.file.clone())
+                        .canonicalize()
+                        .wrap_err_with(|| eyre!("secret not found: {}", i.file))
+                        .and_then(|i| {
+                            SecPathBuf::<InStore>::from(&i)
+                                .read_buffer()
+                                .map(SecBuf::new)
+                        }),
                 )
             })
             .collect();
-        Self(c)
+
+        for ref r in c.iter() {
+            if r.is_err() {
+                bail!("{}", r.as_ref().unwrap_err())
+            }
+        }
+
+        Ok(Self(
+            c.into_iter()
+                .map(|(k, v)| (k, v.expect("handled")))
+                .collect(),
+        ))
     }
 }
 
@@ -175,7 +189,7 @@ impl<'a> RencBuilder<'a> {
 
     pub fn build_inrepo(
         self,
-        ctx: RencCtx<'a, AgeEnc>,
+        ctx: &RencCtx<'a, AgeEnc>,
         cache_dir: PathBuf,
     ) -> RencData<'a, InRepo> {
         RencData::<'_, InRepo>(self.0.iter().fold(HashMap::new(), |mut acc, ((x, _), z)| {
@@ -325,6 +339,14 @@ impl<'a> From<&'a profile::Secret> for SecPathBuf<InStore> {
     fn from(value: &'a profile::Secret) -> Self {
         Self {
             path: value.file.clone().into(),
+            _marker: PhantomData,
+        }
+    }
+}
+impl<'a> From<&'a PathBuf> for SecPathBuf<InStore> {
+    fn from(value: &'a PathBuf) -> Self {
+        Self {
+            path: value.to_owned(),
             _marker: PhantomData,
         }
     }

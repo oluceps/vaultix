@@ -155,7 +155,7 @@ impl Profile {
         let templates = self.templates.iter().filter(|i| if_early(i.0));
 
         let complete = CompleteProfile::from_iter(iter::once(self));
-        let ctx = RencCtx::create(&complete);
+        let ctx = RencCtx::create(&complete)?;
 
         let plain_map = RencBuilder::create(&complete)
             .build_instore()

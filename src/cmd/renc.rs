@@ -48,18 +48,16 @@ impl<'a> CompleteProfile<'a> {
             bail!("`flake.nix` not found here, make sure run in flake toplevel.");
         };
 
-        let ctx = RencCtx::create(&self);
-        let mut raw_instance = RencBuilder::create(&self).build_inrepo(ctx, cache_path.clone());
-        raw_instance.clean_outdated(cache_path.clone())?;
-        raw_instance.retain_noexist();
+        let ctx = RencCtx::create(&self)?;
+        let mut materia = RencBuilder::create(&self).build_inrepo(&ctx, cache_path.clone());
+        materia.clean_outdated(cache_path)?;
+        materia.retain_noexist();
 
         let ParsedIdentity {
             identity,
             recipient: _,
         } = RawIdentity::from(identity).try_into()?;
 
-        let ctx = RencCtx::create(&self);
-
-        raw_instance.build_instance().makeup(&ctx, identity)
+        materia.build_instance().makeup(&ctx, identity)
     }
 }

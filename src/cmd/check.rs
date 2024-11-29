@@ -12,7 +12,7 @@ impl CompleteProfile<'_> {
             .first()
             .with_context(|| eyre::eyre!("deploy must only one host"))?;
 
-        let ctx = RencCtx::create(self);
+        let ctx = RencCtx::create(self)?;
 
         let inst = RencBuilder::create(self)
             .build_instore()
