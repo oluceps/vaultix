@@ -4,13 +4,18 @@ cargo-features = ["edition2024"]
 name = "vaultix"
 version = "0.1.6"
 edition = "2024"
+resolver = "2"
 
 [lib]
 name = "lib"
 path = "src/lib.rs"
 
+[features]
+default = ["plugin"]
+plugin = ["age/plugin"]
+
 [dependencies]
-age = { version = "0.11.0", features = ["ssh", "plugin"]}
+age = { version = "0.11.0", features = ["ssh"]}
 argh = "0.1.12"
 blake3 = "1.5.4"
 console = "0.15.8"
