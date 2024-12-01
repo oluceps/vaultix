@@ -24,7 +24,7 @@ nix eval .#nixosConfigurations.your-hostname.config.vaultix-debug --json > profi
 So that you can feed it to vaultix cli directly:
 
 ```bash
-nix run github:oluceps/vaultix -- -p ./profile.json deploy
+nix run github:milieuim/vaultix -- -p ./profile.json deploy
 ```
 
 To be notice that deploy secrets that needs to be extracted before user init (deploy with --early) in this way is meaningless.

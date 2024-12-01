@@ -1,6 +1,6 @@
 # setup
 
-You could also find the minimal complete nixos configuration on [CI VM test](https://github.com/oluceps/vaultix/tree/main/dev).
+You could also find the minimal complete nixos configuration on [CI VM test](https://github.com/milieuim/vaultix/tree/main/dev).
 
 ### Layout Preview
 
@@ -27,7 +27,7 @@ You could also find the minimal complete nixos configuration on [CI VM test](htt
               inherit self; # Required
             };
             modules = [
-              inputs.oluceps.nixosModules.vaultix # import nixosModule
+              inputs.milieuim.nixosModules.vaultix # import nixosModule
 
               (
                 { config, ... }:

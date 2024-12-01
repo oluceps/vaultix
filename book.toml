@@ -1,10 +1,10 @@
 [book]
-authors = ["oluceps"]
+authors = ["milieuim"]
 language = "en"
 multilingual = false
 src = "doc"
 title = "Vaultix Documentation"
 
 [output.html]
-git-repository-url = "https://github.com/oluceps/vaultix"
+git-repository-url = "https://github.com/milieuim/vaultix"
 git-repository-icon = "fa-github"

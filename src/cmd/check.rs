@@ -23,7 +23,7 @@ impl CompleteProfile<'_> {
             debug!("checking in-store path: {}", p.path.display());
             if !p.path.exists() {
                 return Err(eyre!(
-                    "See https://oluceps.github.io/vaultix/nix-apps.html#renc"
+                    "See https://milieuim.github.io/vaultix/nix-apps.html#renc"
                 ))
                 .wrap_err_with(|| eyre!("Please run renc and add new production to git"))
                 .wrap_err_with(|| eyre!("Forget adding it to git?"))

@@ -30,7 +30,7 @@ nix.settings = {
 
 > `flake-parts` structured config
 
-[flake-parts](https://flake.parts/) provides modulized flake config, vaultix using [flake module](https://github.com/oluceps/vaultix/blob/main/flake-module.nix) to produce nix apps and hidding complexity.
+[flake-parts](https://flake.parts/) provides modulized flake config, vaultix using [flake module](https://github.com/milieuim/vaultix/blob/main/flake-module.nix) to produce nix apps and hidding complexity.
 
 ---
 

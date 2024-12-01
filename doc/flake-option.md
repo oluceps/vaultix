@@ -8,7 +8,7 @@ Here is a flake module configuration, it should be written in your flake top-lev
 
 Commented options means its default value.
 
-You could find the definition [here](https://github.com/oluceps/vaultix/blob/main/flake-module.nix)
+You could find the definition [here](https://github.com/milieuim/vaultix/blob/main/flake-module.nix)
 
 ```nix
 flake.vaultix = {
