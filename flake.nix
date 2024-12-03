@@ -74,16 +74,16 @@
           }:
           let
             target = (pkgs.lib.systems.elaborate system).config;
-            mkOverridedToolchain =
+            mkOverriddenToolchain =
               scale:
               scale.override {
                 extensions = [ "rust-src" ];
                 targets = [ target ];
               };
             mkCraneLib = toolchain: (crane.mkLib pkgs).overrideToolchain toolchain;
-            releaseToolChain = mkOverridedToolchain pkgs.rust-bin.nightly.latest.minimal;
+            releaseToolChain = mkOverriddenToolchain pkgs.rust-bin.nightly.latest.minimal;
             releaseCraneLib = mkCraneLib releaseToolChain;
-            devCraneLib = mkCraneLib (mkOverridedToolchain pkgs.rust-bin.nightly.latest.complete);
+            devCraneLib = mkCraneLib (mkOverriddenToolchain pkgs.rust-bin.nightly.latest.complete);
             inherit (releaseCraneLib) buildPackage;
           in
           {
@@ -143,6 +143,7 @@
                 cargo-fuzz
                 mdbook-alerts
                 statix
+                typos
               ];
             };
 

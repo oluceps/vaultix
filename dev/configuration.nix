@@ -36,9 +36,9 @@
       }
     )
   ];
-  # WARN: This is just for testing and demostrating, you SHOULD NOT set this option
-  # WARN: This is just for testing and demostrating, you SHOULD NOT set this option
-  # WARN: This is just for testing and demostrating, you SHOULD NOT set this option
+  # WARN: This is just for testing and demonstrating, you SHOULD NOT set this option
+  # WARN: This is just for testing and demonstrating, you SHOULD NOT set this option
+  # WARN: This is just for testing and demonstrating, you SHOULD NOT set this option
   services.openssh.hostKeys = [
     {
       path = pkgs.writeText "UNSAFE-SSH-PRIVATE-KEY" ''

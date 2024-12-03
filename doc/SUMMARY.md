@@ -1,7 +1,7 @@
 # Summary
 
 - [Introduction](./intro.md)
-- [Prerequisits](./prerequisits.md)
+- [Prerequisites](./prerequisites.md)
 - [Setup](./setup.md)
   - [Flake Option](./flake-option.md)
     - [flakeModule config](./flake-module.md)

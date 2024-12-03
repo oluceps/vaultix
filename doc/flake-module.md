@@ -16,7 +16,7 @@ flake.vaultix = {
 
 ### node =
 
-NixOS systems that allow vaultix to manage. Generally pass `self.nixosConfigurations` will work, if you're using framework like `colmena` that produced unstandard system outputs, you need manually convertion, there always some way. For example, for `colmena`:
+NixOS systems that allow vaultix to manage. Generally pass `self.nixosConfigurations` will work, if you're using framework like `colmena` that produced unstandard system outputs, you need manually conversion, there always some way. For example, for `colmena`:
 
 ```nix
 nodes = inherit ((colmena.lib.makeHive self.colmena).introspect (x: x)) nodes;
@@ -31,10 +31,10 @@ Supports age native secrets (recommend protected with passphrase), this could be
 
 + **string (Recommend)**, of **absolute path** to your local age identity. Thus it can avoid loading identity to nix store.
 
-+ **path**, relative to your age identity in your configuration repository. Note that writting path directly will copy your private key into nix store, with **Global READABLE**.
++ **path**, relative to your age identity in your configuration repository. Note that writing path directly will copy your private key into nix store, with **Global READABLE**.
 
 > [!CAUTION]  
-> Writting **path** directly will copy your private key into local nix store, with **Global READABLE**. Set path is safe **only** while your private key cannot be directly accessed, such as storing in yubikey or complex passphrase protected.
+> Writing **path** directly will copy your private key into local nix store, with **Global READABLE**. Set path is safe **only** while your private key cannot be directly accessed, such as storing in yubikey or complex passphrase protected.
 
 
 This is *the identity* that could decrypt all of your secret, take care of it.

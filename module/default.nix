@@ -204,7 +204,7 @@ in
     in
     mkIf sysusers (
       let
-        deployRequisits = [
+        deployRequisites = [
           ("CACHE=" + cfg.settings.cacheInStore)
           ("CHECK_RESULT=" + checkRencSecsReport)
         ];
@@ -217,7 +217,7 @@ in
           unitConfig.DefaultDependencies = "no";
           serviceConfig = {
             Type = "oneshot";
-            Environment = deployRequisits;
+            Environment = deployRequisites;
             ExecStart = "${lib.getExe cfg.package} -p ${profile} deploy";
             RemainAfterExit = true;
           };
@@ -230,7 +230,7 @@ in
 
           serviceConfig = {
             Type = "oneshot";
-            Environment = deployRequisits;
+            Environment = deployRequisites;
             ExecStart = "${lib.getExe cfg.package} -p ${profile} deploy --early";
             RemainAfterExit = true;
           };

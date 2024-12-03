@@ -1,4 +1,4 @@
-# Prerequisits
+# Prerequisites
 
 + use `flake`
 + `nix-command` and `flake` experimental feature enabled. About [experimental](https://nix.dev/manual/nix/2.18/contributing/experimental-features)
@@ -70,6 +70,6 @@ e.g.
 
 `userborn` was introduced in [Aug 30 2024](https://github.com/NixOS/nixpkgs/pull/332719)
 
-Both avaliable in NixOS 24.11 or newer.
+Both available in NixOS 24.11 or newer.
 
 Vaultix using systemd instead of old perl script for activating on system startup or switch.

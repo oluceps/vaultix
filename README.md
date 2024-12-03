@@ -9,7 +9,7 @@ Secret managing scheme for NixOS
 
 Highly inspired by [agenix-rekey](https://github.com/oddlama/agenix-rekey) and [sops-nix](https://github.com/Mic92/sops-nix).
 
-+ Based on age rust [implemention](https://docs.rs/age/latest/age)
++ Based on age rust [implementation](https://docs.rs/age/latest/age)
 + Parallel encryption at host granularity
 + Support secure identity with passphrase
 + Support template for reusing insensitive stanza
