@@ -28,9 +28,10 @@ jobs:
       - name: Run linkspector
         uses: umbrelladocs/action-linkspector@v1
         with:
-          # github_token: ${{ secrets.github_token }}
           reporter: github-pr-review
           fail_on_error: true
+      - name: Use custom config file
+        uses: crate-ci/typos@master
       - uses: actions/checkout@v4
         with:
           repository: 'myrrhlab/vaultix-mdbook-custom'
@@ -60,9 +61,10 @@ jobs:
       - name: Run linkspector
         uses: umbrelladocs/action-linkspector@v1
         with:
-          # github_token: ${{ secrets.github_token }}
           reporter: github-pr-review
           fail_on_error: true
+      - name: Use custom config file
+        uses: crate-ci/typos@master
       - uses: actions/checkout@v4
         with:
           repository: 'myrrhlab/vaultix-mdbook-custom'
