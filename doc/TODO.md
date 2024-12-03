@@ -1,5 +1,6 @@
 - [ ] i18n & multilingual docs
 - [ ] restart/reload sd unit control (after systemd varlink api)
+- [x] nix without framework compatible
 - [x] parallel encryption & ~~decryption~~ (age identity not `Send`)
 - [x] reduce duplicated reads
 - [x] secrets for users (pre-userborn extraction)
