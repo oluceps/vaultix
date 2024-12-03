@@ -1,10 +1,12 @@
 # NixOS Module Options
 
 
+This is in nixosConfiguration, produced by `nixosSystem` function. Any confusion about this please refer to [our test system config](https://github.com/milieuim/vaultix/blob/7b14c948e7d7a8e86ed5ee4c5927c588ee344db7/dev/test.nix#L16) and [unofficial doc](https://nixos-and-flakes.thiscute.world/nixos-with-flakes/nixos-flake-configuration-explained)
+
 Configurable option could be divided into 3 parts:
 
 ```nix
-# configuration.nix
+# in configuration.nix etc.
 {
   imports = [ inputs.vaultix.nixosModules.default ];
   vaultix = {
@@ -12,9 +14,9 @@ Configurable option could be divided into 3 parts:
       hostPubkey = "ssh-ed25519 AAAA..."; # required
       # ...
     };
-    secrets = { ... };
-    templates = { ... };
-    beforeUserborn = [...];
+    secrets = { };
+    templates = { };
+    beforeUserborn = [ ];
   };
 }
 ```
@@ -25,18 +27,18 @@ Literally.
 
 <div id="dd"></div>
 
-### decryptedDir: path str
+### decryptedDir: absolute path str
 
 Folder where secrets are symlinked to. Default is `/run/vaultix`.
 
-### decryptedDirForUser: path str
+### decryptedDirForUser: absolute path str
 
 Same as above, but for secrets and templates that required by user, which means needs to be initialize before user born.
 
 
 <div id="dmp"></div>
 
-### decryptedMountPoint
+### decryptedMountPoint: absolute path str
 
 Path str with no trailing slash
 
@@ -76,16 +78,16 @@ example:
 ```nix
 hostPubkey = "ssh-ed25519 AAAAC3Nz....."
 # or
-hostPubkey = /etc/ssh/ssh_host_ed25519_key.pub
+hostPubkey = ./ssh_host_ed25519_key.pub # no one like this i think
 ```
 
-ssh public key **of** the hostKey. This is different from every host, since each generates host key while initial booting.
+ssh public key of the hostKey. This is different from every host, since each generates host key while initial booting.
 
 Get this of remote machine by: `ssh-keyscan ip`. It supports `ed25519` type.
 
-It should placed in `/etc/ssh/` with host ssh private key, but with `.pub` suffix.
+You could find it in `/etc/ssh/` next to host ssh private key, with `.pub` suffix.
 
-This could be either literal string or path, but public key literal string is more recommended.
+This could be either literal string or path, the previous one is more recommended.
 
 ---
 

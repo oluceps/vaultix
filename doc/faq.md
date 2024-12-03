@@ -2,6 +2,6 @@
 
 **Q.** Rebooting and unit failed with could not found ssh private key, but it indeed just there.
 
-**A.**   Check if using `root on tmpfs`, and modify [hostKeys](https://milieuim.github.io/vaultix/nixos-option.html#hostkeys) path to Absolute path string which your REAL private key located (not bind mounted or symlinked etc.). This could also fix similar issue happened with agenix and sops-nix...
+**A.**   Check if using `root on tmpfs`, and modify [hostKeys](https://milieuim.github.io/vaultix/nixos-option.html#hostkeys) path to Absolute path string which your REAL private key located (not bind mounted or symlinked etc.). You could also choose setting `needForBoot` for your persist mountpoing. This could also fix similar issue happened with agenix and sops-nix.
 
 ---

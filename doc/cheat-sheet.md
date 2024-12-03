@@ -1,4 +1,4 @@
-# Sheets
+# Cheat Sheets
 Common used workflow with vaultix.
 
 ## Add new secret
@@ -12,21 +12,23 @@ nix run .#vaultix.app.x86_64-linux.edit -- ./where/new-to-add.age
 
 ### 2. Add a secret to nixos module:
 
-```nix
+```diff
 secrets = {
   #...
-  new-to-add.file = ./where/new-to-add.age;
++  new-to-add.file = ./where/new-to-add.age;
 };
 ```
 
-### 3. Run renc:
+### 3. Add it to git
+
+### 4. Run renc:
 
 
 ```bash
 nix run .#vaultix.app.x86_64-linux.renc
 ```
 
-### 4. Add new produced stuff to git.
+### 4. Add all produced stuff to git.
 
 
 
@@ -60,4 +62,3 @@ rm ./where/new-to-add.age
 ```bash
 nix run .#vaultix.app.x86_64-linux.renc
 ```
-Then add changes to git.

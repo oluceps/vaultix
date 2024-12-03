@@ -1,6 +1,6 @@
 # Nix Apps
 
-Provided user friendly cli tools:
+Provided user friendly cli interface, feel free to set shell alias:
 
 
 ## renc
