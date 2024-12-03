@@ -19,7 +19,11 @@
       ...
     }:
     flake-parts.lib.mkFlake { inherit inputs; } (
-      { flake-parts-lib, withSystem, ... }:
+      {
+        flake-parts-lib,
+        withSystem,
+        ...
+      }:
       let
         inherit (flake-parts-lib) importApply;
         flakeModules.default = importApply ./flake-module.nix {
@@ -54,6 +58,7 @@
           [
             flake-parts.flakeModules.easyOverlay
             flake-parts.flakeModules.partitions
+            ./compatible.nix
           ];
         systems = [
           "x86_64-linux"

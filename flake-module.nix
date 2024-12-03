@@ -85,7 +85,6 @@ in
                       inherit (config'.vaultix) pkgs;
                       inherit lib;
                       package = vaultixFlake.packages.${system}.default;
-                      localFlake = self;
                     }
                   )
               ) config.allSystems;
