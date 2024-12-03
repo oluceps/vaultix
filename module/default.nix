@@ -3,9 +3,8 @@
   options,
   pkgs,
   lib,
-  self,
   ...
-}:
+}@args:
 let
   inherit (lib)
     all
@@ -21,6 +20,9 @@ let
     assertMsg
     ;
   inherit (config.users) users;
+
+  # for getting path of this flake in nix store
+  self = args.self or args.inputs.self;
 
   cfg = config.vaultix;
 
