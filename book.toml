@@ -8,3 +8,5 @@ title = "Vaultix Documentation"
 [output.html]
 git-repository-url = "https://github.com/milieuim/vaultix"
 git-repository-icon = "fa-github"
+
+[preprocessor.alerts]

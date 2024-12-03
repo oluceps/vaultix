@@ -40,6 +40,7 @@ jobs:
       - name: Install mdBook
         run: |
           cargo install mdbook --no-default-features --features search --vers "^0.4" --locked
+          cargo install mdbook-alerts --locked
       - name: Build mdBook
         run: |
           mdbook build
@@ -71,6 +72,7 @@ jobs:
       - name: Install mdBook
         run: |
           cargo install mdbook --no-default-features --features search --vers "^0.4" --locked
+          cargo install mdbook-alerts --locked
       - name: Build mdBook
         run: |
           mdbook build
