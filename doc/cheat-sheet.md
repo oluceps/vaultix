@@ -1,4 +1,4 @@
-# Workflows
+# Sheets
 Common used workflow with vaultix.
 
 ## Add new secret

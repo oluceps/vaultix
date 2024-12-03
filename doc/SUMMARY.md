@@ -6,7 +6,7 @@
   - [Flake Option](./flake-option.md)
   - [NixOS Option](./nixos-option.md)
 - [Nix Apps](./nix-apps.md)
-- [Workflow](./workflow.md)
+- [Cheat Sheet](./cheat-sheet.md)
 - [Development](./develop.md)
 - [Test Coverage](./coverage.md)
 - [Advanced](./advanced.md)
