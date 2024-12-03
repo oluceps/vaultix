@@ -2,8 +2,9 @@
 
 ## Bootstrap
 
+Vaultix relies on host ssh key controling per-host secret access permission, which generated when each host first boot.
 
-todo
+You could bootstrap the host with [nixos-anywhere](https://github.com/nix-community/nixos-anywhere) with --copy-host-keys, then optionally regenerate the host key after successfully boot. Or first deploy without vaultix.
 
 ## Tricks
 
