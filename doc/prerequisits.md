@@ -1,21 +1,17 @@
 # Prerequisits
 
-It basically require:
-
-+ `nix-command` feature enabled
-+ `flake-parts` structured config
-+ `self` as one of `specialArgs` for nixosSystem
-+ `systemd.sysusers` or `services.userborn` option enabled
-
-See following for reason and details.
++ use `flake`
++ `nix-command` and `flake` experimental feature enabled. About [experimental](https://nix.dev/manual/nix/2.18/contributing/experimental-features)
++ `inputs` or `self` as one of `specialArgs` for `nixosSystem`
++ `systemd.sysusers` or `services.userborn` option enabled (means you need NixOS 24.11 or newer)
 
 ---
 
 > enable `nix-command` `flakes` features
 
-Which is almost every user will do.
+Which is almost every user did.
 
-Vaultix depends on nix flake and nix apps to perform basic function.
+Vaultix depends on flake and nix apps to perform basic function.
 
 ```nix
 nix.settings = {
@@ -28,17 +24,43 @@ nix.settings = {
 
 ---
 
-> `flake-parts` structured config
-
-[flake-parts](https://flake.parts/) provides modulized flake config, vaultix using [flake module](https://github.com/milieuim/vaultix/blob/main/flake-module.nix) to produce nix apps and hidding complexity.
-
----
-
-> `self` as one of `specialArgs` for nixosSystem
+> `inputs` or `self` as one of `specialArgs` for `nixosSystem`
 
 For passing top-level flake arguments to nixos module.
 
 This requirement may change in the future, with backward compatiblility. Looking forward for a better implementation in nixpkgs that more gracefully to do so.
+
+e.g.
+
+```nix
+{
+  description = "An Example";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    vaultix.url = "github:milieuim/vaultix";
+  };
+
+  outputs = { self, nixpkgs, ... }@inputs: {
+    nixosConfigurations.my-nixos = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+
+      ######################################
+      specialArgs = {
+        inherit self; # or inputs. You can inherit both as well.
+      };
+      ######################################
+
+      modules = [
+        inputs.vaultix.nixosModules.default
+        ./configuration.nix
+      ];
+      # ...
+    };
+    # vaultix = ...
+  };
+}
+```
 
 ---
 
@@ -48,4 +70,6 @@ This requirement may change in the future, with backward compatiblility. Looking
 
 `userborn` was introduced in [Aug 30 2024](https://github.com/NixOS/nixpkgs/pull/332719)
 
-Vaultix using systemd instead of old perl script for activating on system startup or switch. It meams that you need on `nixos-24.05` or newer version for using it.
+Both avaliable in NixOS 24.11 or newer.
+
+Vaultix using systemd instead of old perl script for activating on system startup or switch.
