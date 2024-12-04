@@ -5,12 +5,10 @@ The Vaultix configuration takes into two parts:
 
 + flake level setup.
 
-  You can choose [flakeModule](./flake-module.md) OR [pure nix](pure-nix-config.md) in this part.
-  it's more recommend to use `flakeModule`, since it provides type check and more elegant configuration interface.
+  You can choose either [flakeModule](./flake-module.md) or [pure nix](pure-nix-config.md) in this part.
+  it's **recommended** to use `flakeModule`, since it provides type check and more elegant configuration interface.
 
 + nixos module level setup.
 
-  Some of flake level config passthrough into this by setting specialArgs.
 
-
-You need to complete both to make it work.
+It's required to complete setup in both part to make it work.

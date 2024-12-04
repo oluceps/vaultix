@@ -27,22 +27,29 @@ Literally.
 
 <div id="dd"></div>
 
-### decryptedDir: absolute path str
+### decryptedDir
 
-Folder where secrets are symlinked to. Default is `/run/vaultix`.
++ type: `string of absolute path`
++ default: `/run/vaultix`
 
-### decryptedDirForUser: absolute path str
+Folder where secrets are symlinked to.
+
+### decryptedDirForUser
+
++ type: `string of absolute path`
++ default: `/run/vaultix-for-user`
 
 Same as above, but for secrets and templates that required by user, which means needs to be initialize before user born.
 
 
 <div id="dmp"></div>
 
-### decryptedMountPoint: absolute path str
+### decryptedMountPoint
+
++ type: `string of absolute path`
++ default: `/run/vaultix.d`
 
 Path str with no trailing slash
-
-default is `/run/vaultix.d`
 
 Where secrets are created before they are symlinked to `vaultix.settings.decryptedDir`
 
@@ -52,9 +59,8 @@ It decrypting secrets into this directory, with generation number like `/run/vau
 
 ### hostKeys
 
-`{ path: str, type: str }`
-
-default is `config.services.openssh.hostKeys`
++ type: `{ path: str, type: str }`
++ default: `config.services.openssh.hostKeys`
 
 This generally has no need to manually change, unless you know clearly what you're doing.
 
@@ -71,7 +77,9 @@ format:
 ]
 ```
 
-### hostPubkey: str or path
+### hostPubkey
+
++ type: `(string of pubkey) or (path of pubkey file)`
 
 example:
 
@@ -124,7 +132,7 @@ This part basically keeps identical with `agenix`. But has few diffs:
 
 ### path
 
-str of path
++ type: `absolute path string`
 
 If you manually set this, it will deploy to specified location instead of to `/run/vaultix.d` (default value of [decryptedMountPoint](#dmp)).
 
@@ -182,20 +190,20 @@ ${config.vaultix.placeholder.some} here
 ''
 ```
 
-TO BE NOTICE that the source secret file may have trailing `\n`:
+> [!NOTE]
+> Source secret text may have trailing `\n`, if you don't want automatically remove it please see [trim](#trim):
 
 ### trim
 
-boolean value
-
-default true;
++ type: `bool`
++ default: `true`;
 
 Removing trailing and leading whitespace by default.
 
 
 ## beforeUserborn
 
-List of string.
++ type: `list of string`
 
 For deploying secrets and templates that required before user init.
 

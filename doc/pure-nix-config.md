@@ -2,7 +2,7 @@
 
 
 > [!NOTE]
-> If you completed setup with [flakeModule](./flake-module.md), you can skip to [nixos module setup](nixos-option.md)
+> If you completed setup with flake-parts' [flakeModule](./flake-module.md), you can skip this section and jump to [nixos module setup](nixos-option.md)
 
 
 The option is identical to [flakeModule](./flake-module.md), but different way to perform nix app producing.

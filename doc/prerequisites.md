@@ -1,7 +1,7 @@
 # Prerequisites
 
 + use `flake`
-+ `nix-command` and `flake` experimental feature enabled. About [experimental](https://nix.dev/manual/nix/2.18/contributing/experimental-features)
++ `nix-command` and `flake` [experimental feature](https://nix.dev/manual/nix/2.18/contributing/experimental-features) enabled.
 + `inputs` or `self` as one of `specialArgs` for `nixosSystem`
 + `systemd.sysusers` or `services.userborn` option enabled (means you need NixOS 24.11 or newer)
 
@@ -9,9 +9,9 @@
 
 > enable `nix-command` `flakes` features
 
-Which is almost every user did.
+Which almost user done.
 
-Vaultix depends on flake and nix apps to perform basic function.
+Vaultix depends on flake and nix apps perform basic function.
 
 ```nix
 nix.settings = {

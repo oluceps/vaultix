@@ -1,5 +1,8 @@
 ## flakeModule Options
 
+> [!NOTE]
+> If you don't like flake-parts, you could skip to another choice without flake-level option type check: [pure nix](./pure-nix-config.md)
+
 
 This is a flake module configuration, it should be written in your flake top-level or in flake module.
 
@@ -14,7 +17,9 @@ flake.vaultix = {
 };
 ```
 
-### node =
+### nodes
+
++ type: `typeOf nixosConfigurations`
 
 NixOS systems that allow vaultix to manage. Generally pass `self.nixosConfigurations` will work, if you're using framework like `colmena` that produced unstandard system outputs, you need manually conversion, there always some way. For example, for `colmena`:
 
@@ -23,7 +28,9 @@ nodes = inherit ((colmena.lib.makeHive self.colmena).introspect (x: x)) nodes;
 ```
 
 
-### identity =
+### identity
+
++ type: `string or path`
 
 `Age identity file`.
 
@@ -34,7 +41,7 @@ Supports age native secrets (recommend protected with passphrase), this could be
 + **path**, relative to your age identity in your configuration repository. Note that writing path directly will copy your private key into nix store, with **Global READABLE**.
 
 > [!CAUTION]  
-> Writing **path** directly will copy your private key into local nix store, with **Global READABLE**. Set path is safe **only** while your private key cannot be directly accessed, such as storing in yubikey or complex passphrase protected.
+> Writing **path** directly (without `"`) will copy your private key into local nix store, with **Global READABLE**. Set path is safe **only** while your private key cannot be directly accessed, such as storing in yubikey or complex passphrase protected.
 
 
 This is *the identity* that could decrypt all of your secret, take care of it.
@@ -56,11 +63,13 @@ Since it inherited great compatibility of `age`, you could use [yubikey](https:/
 
 
 
-### extraRecipients =
+### extraRecipients
+
++ type: `list of string`
 
 Recipients used for backup. Any of identity of them will able to decrypt all secrets, like the `identity`.
 
-### cache =
+### cache
 
 **String** of path that **relative** to flake root, used for storing host public key
 re-encrypted secrets. It's default `./secrets/cache`.
