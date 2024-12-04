@@ -54,7 +54,7 @@ in
               '';
             };
             extraRecipients = mkOption {
-              type = with types; listOf (coercedTo path toString str);
+              type = with types; listOf str;
               default = [ ];
               example = [
                 "age1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs3290gq"
