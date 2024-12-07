@@ -15,7 +15,7 @@ use crate::{
     parser::recipient::RawRecip,
     profile,
     util::{
-        secbuf::{Plain, SecBuf},
+        secbuf::{Decryptable, Plain, SecBuf},
         secmap::{InRepo, SecPathBuf},
     },
 };

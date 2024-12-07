@@ -42,19 +42,33 @@ impl<T> SecBuf<T> {
     pub fn buf_ref(&self) -> &Vec<u8> {
         self.buf.as_ref()
     }
-    pub fn decrypt(&self, ident: &dyn Identity) -> Result<SecBuf<Plain>> {
-        let buffer = self.buf_ref();
-        let decryptor = age::Decryptor::new(&buffer[..])?;
-
-        let mut dec_content = vec![];
-        let mut reader = decryptor.decrypt(iter::once(ident))?;
-        let res = reader.read_to_end(&mut dec_content);
-        if let Ok(b) = res {
-            debug!("decrypted secret {} bytes", b);
-        }
-        Ok(SecBuf::new(dec_content))
-    }
 }
+
+pub trait Decryptable {
+    fn decrypt(&self, ident: &dyn Identity) -> Result<SecBuf<Plain>>;
+}
+
+macro_rules! impl_decryptable {
+    ($type:ty) => {
+        impl Decryptable for $type {
+            fn decrypt(&self, ident: &dyn Identity) -> Result<SecBuf<Plain>> {
+                let buffer = self.buf_ref();
+                let decryptor = age::Decryptor::new(&buffer[..])?;
+
+                let mut dec_content = vec![];
+                let mut reader = decryptor.decrypt(iter::once(ident))?;
+                let res = reader.read_to_end(&mut dec_content);
+                if let Ok(b) = res {
+                    debug!("decrypted secret {} bytes", b);
+                }
+                Ok(SecBuf::new(dec_content))
+            }
+        }
+    };
+}
+
+impl_decryptable!(SecBuf<HostEnc>);
+impl_decryptable!(SecBuf<AgeEnc>);
 
 impl<T> From<Vec<u8>> for SecBuf<T> {
     fn from(value: Vec<u8>) -> Self {
@@ -75,6 +89,7 @@ impl SecBuf<AgeEnc> {
         self.decrypt(ident).and_then(|d| d.encrypt(recips))
     }
 }
+
 use eyre::eyre;
 use log::debug;
 

@@ -18,7 +18,7 @@ use eyre::{Result, eyre};
 use log::debug;
 use std::marker::PhantomData;
 
-use super::secbuf::{HostEnc, SecBuf};
+use super::secbuf::{Decryptable, HostEnc, SecBuf};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct SecPath<P: AsRef<Path>, T> {

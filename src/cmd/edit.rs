@@ -17,8 +17,9 @@ use crate::{
     util::secmap::InRepo,
 };
 
+use crate::util::secbuf::Decryptable;
 use age::Recipient;
-use eyre::{eyre, Context, ContextCompat};
+use eyre::{Context, ContextCompat, eyre};
 use log::info;
 use nom::AsBytes;
 
