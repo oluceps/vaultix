@@ -3,6 +3,8 @@ name: Docs
 on:
   push:
     branches: ["*"]
+    paths:
+      - 'doc/*'
   workflow_dispatch:
 
 permissions:
