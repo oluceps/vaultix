@@ -31,9 +31,15 @@ in
         '';
       };
       file = mkOption {
-        type = types.path;
+        type =
+          with types;
+          oneOf [
+            str
+            path
+          ];
         description = ''
           Age file the secret is loaded from.
+          Could be path, or string of path relative to flake root.
         '';
       };
       path = mkOption {
