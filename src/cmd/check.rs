@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use eyre::{Context, ContextCompat, Result, eyre};
 use log::debug;
 
@@ -6,13 +8,13 @@ use crate::util::secmap::{RencBuilder, RencCtx};
 use super::renc::CompleteProfile;
 
 impl CompleteProfile<'_> {
-    pub fn check(&self) -> Result<()> {
+    pub fn check(&self, flake_root: PathBuf) -> Result<()> {
         let profile = self
             .inner_ref()
             .first()
             .with_context(|| eyre::eyre!("deploy must only one host"))?;
 
-        let ctx = RencCtx::create(self)?;
+        let ctx = RencCtx::create(self, Some(flake_root))?;
 
         let inst = RencBuilder::create(self)
             .build_instore()

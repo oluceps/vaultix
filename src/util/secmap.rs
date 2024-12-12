@@ -104,22 +104,34 @@ impl<'a, B> RencCtx<'a, B> {
 }
 
 impl<'a> RencCtx<'a, AgeEnc> {
-    pub fn create(material: &'a CompleteProfile) -> Result<Self> {
+    pub fn create(material: &'a CompleteProfile, flake_root: Option<PathBuf>) -> Result<Self> {
         let c: DashMap<&Secret, Result<SecBuf<AgeEnc>>> = material
             .inner_ref()
             .iter()
             .flat_map(|x| x.secrets.values())
             .map(|i| {
+                let file = {
+                    let file_pathbuf = PathBuf::from(&i.file);
+
+                    if flake_root.is_some() && file_pathbuf.is_relative() {
+                        let mut flake_root = flake_root.clone().expect("yes");
+                        flake_root.push(file_pathbuf);
+                        flake_root
+                    } else {
+                        file_pathbuf
+                    }
+                };
                 (
                     i,
-                    PathBuf::from(i.file.clone())
-                        .canonicalize()
-                        .wrap_err_with(|| eyre!("secret not found: {}", i.file))
-                        .and_then(|i| {
-                            SecPathBuf::<InStore>::from(&i)
-                                .read_buffer()
-                                .map(SecBuf::new)
-                        }),
+                    ({
+                        file.canonicalize()
+                            .wrap_err_with(|| eyre!("secret not found: {}", i.file))
+                            .and_then(|i| {
+                                SecPathBuf::<InStore>::from(&i)
+                                    .read_buffer()
+                                    .map(SecBuf::new)
+                            })
+                    }),
                 )
             })
             .collect();

@@ -48,7 +48,7 @@ impl<'a> CompleteProfile<'a> {
             bail!("`flake.nix` not found here, make sure run in flake toplevel.");
         };
 
-        let ctx = RencCtx::create(&self)?;
+        let ctx = RencCtx::create(&self, None)?;
         let mut materia = RencBuilder::create(&self).build_inrepo(&ctx, cache_path.clone());
         materia.clean_outdated(cache_path)?;
         materia.retain_noexist();

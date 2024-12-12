@@ -1,6 +1,6 @@
 use std::{fs, path::PathBuf};
 
-use eyre::{eyre, Context, ContextCompat};
+use eyre::{Context, ContextCompat, eyre};
 use log::info;
 use renc::CompleteProfile;
 use {argh::FromArgs, std::fmt::Debug};
@@ -123,7 +123,7 @@ impl Args {
             SubCmd::Check(_) => {
                 info!("start checking");
                 let profile = profile()?;
-                CompleteProfile::from_iter(&profile).check()?;
+                CompleteProfile::from_iter(&profile).check(flake_root)?;
                 info!("check complete");
                 Ok(())
             }
