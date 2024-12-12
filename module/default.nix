@@ -200,7 +200,7 @@ in
 
       checkRencSecsReport =
         pkgs.runCommandNoCCLocal "secret-check-report" { }
-          "${lib.getExe cfg.package} -p ${mkProfile cfg} check > $out";
+          "${lib.getExe cfg.package} -p ${mkProfile cfg} --flake-root ${self} check > $out";
     in
     mkIf sysusers (
       let
