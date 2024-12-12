@@ -112,26 +112,23 @@ impl<'a> RencCtx<'a, AgeEnc> {
             .map(|i| {
                 let file = {
                     let file_pathbuf = PathBuf::from(&i.file);
-
-                    if flake_root.is_some() && file_pathbuf.is_relative() {
-                        let mut flake_root = flake_root.clone().expect("yes");
+                    if file_pathbuf.is_absolute() {
+                        file_pathbuf
+                    } else {
+                        let mut flake_root = flake_root.clone().expect("checked");
                         flake_root.push(file_pathbuf);
                         flake_root
-                    } else {
-                        file_pathbuf
                     }
                 };
                 (
                     i,
-                    ({
-                        file.canonicalize()
-                            .wrap_err_with(|| eyre!("secret not found: {}", i.file))
-                            .and_then(|i| {
-                                SecPathBuf::<InStore>::from(&i)
-                                    .read_buffer()
-                                    .map(SecBuf::new)
-                            })
-                    }),
+                    file.canonicalize()
+                        .wrap_err_with(|| eyre!("secret not found: {}", i.file))
+                        .and_then(|i| {
+                            SecPathBuf::<InStore>::from(&i)
+                                .read_buffer()
+                                .map(SecBuf::new)
+                        }),
                 )
             })
             .collect();
